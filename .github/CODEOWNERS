@@ -1,0 +1,21 @@
+# CODEOWNERS — https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @tk85457
+
+# Native / C++ layer
+app/src/main/cpp/ @tk85457
+
+# UI layer
+app/src/main/java/com/localmind/app/ui/ @tk85457
+
+# Core engine
+app/src/main/java/com/localmind/app/core/ @tk85457
+app/src/main/java/com/localmind/app/llm/ @tk85457
+
+# Build configuration
+*.gradle.kts @tk85457
+gradle.properties @tk85457
+
+# CI/CD
+.github/ @tk85457

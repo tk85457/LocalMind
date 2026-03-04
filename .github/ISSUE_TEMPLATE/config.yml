@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/tk85457/LocalMind/discussions
+    about: Ask questions, share ideas, or discuss LocalMind with the community
+  - name: 📖 Documentation
+    url: https://github.com/tk85457/LocalMind/blob/main/BUILD.md
+    about: Check the build documentation before reporting build issues
