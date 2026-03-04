@@ -18,7 +18,11 @@
 
 ---
 
-<h1 align="center">🧠 LocalMind — Private On-Device AI Assistant for Android</h1>
+<p align="center">
+  <img src="app_icon.png" width="200" alt="LocalMind App Icon" />
+</p>
+
+<h1 align="center">LocalMind — Private On-Device AI Assistant for Android</h1>
 
 <p align="center">
   <strong>Run powerful Large Language Models (LLMs) entirely on your Android phone — no cloud servers, no API keys, no monthly subscriptions, no data collection. 100% offline, 100% private.</strong>
