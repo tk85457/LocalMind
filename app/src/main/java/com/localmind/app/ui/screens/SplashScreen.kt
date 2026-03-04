@@ -52,7 +52,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_launcher_foreground_neon),
+            painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher_foreground),
             contentDescription = "LocalMind",
             modifier = Modifier
                 .size(120.dp)
