@@ -1,0 +1,10 @@
+HSPLcom/localmind/app/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/localmind/app/LocalMindApp;-><init>()V
+HSPLcom/localmind/app/navigation/NavGraphKt;->NavGraph(Landroidx/navigation/NavHostController;Lkotlin/jvm/functions/Function0;Ljava/lang/String;Ljava/lang/String;Landroidx/compose/runtime/Composer;II)V
+HSPLcom/localmind/app/ui/screens/ChatScreenKt;->ChatScreen(Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)V
+HSPLcom/localmind/app/ui/viewmodel/ChatViewModel;-><init>(**)V
+HSPLcom/localmind/app/ui/viewmodel/SettingsViewModel;-><init>(**)V
+HSPLcom/localmind/app/ui/theme/ThemeKt;->LocalMindTheme(**)V
+HSPLcom/localmind/app/data/repository/SettingsRepository;-><init>(**)V
+HSPLcom/localmind/app/llm/LLMEngine;-><init>(**)V
+HSPLcom/localmind/app/llm/ModelLifecycleManager;-><init>(**)V

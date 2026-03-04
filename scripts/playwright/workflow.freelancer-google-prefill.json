@@ -1,0 +1,37 @@
+{
+  "name": "freelancer-google-login-start",
+  "defaults": {
+    "retries": 3,
+    "retryDelayMs": 900
+  },
+  "steps": [
+    {
+      "action": "open",
+      "url": "https://www.freelancer.com/login"
+    },
+    {
+      "action": "click",
+      "target": {
+        "contains": "Continue with Google"
+      }
+    },
+    {
+      "action": "wait",
+      "ms": 1200
+    },
+    {
+      "action": "tab-list"
+    },
+    {
+      "action": "tab-select",
+      "index": 1
+    },
+    {
+      "action": "wait",
+      "ms": 1200
+    },
+    {
+      "action": "snapshot"
+    }
+  ]
+}

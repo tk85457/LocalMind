@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <files-path name="models" path="LocalMind/models/" />
+    <files-path name="cache" path="LocalMind/cache/" />
+    <external-files-path name="external_models" path="LocalMind/models/" />
+</paths>

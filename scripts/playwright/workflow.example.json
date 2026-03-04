@@ -1,0 +1,29 @@
+{
+  "name": "example-domain-learn-more",
+  "session": "localmind-example",
+  "headed": false,
+  "defaults": {
+    "retries": 3,
+    "retryDelayMs": 700
+  },
+  "steps": [
+    {
+      "action": "open",
+      "url": "https://example.com"
+    },
+    {
+      "action": "click",
+      "target": {
+        "role": "link",
+        "text": "Learn more"
+      }
+    },
+    {
+      "action": "assert-url-contains",
+      "value": "iana.org"
+    },
+    {
+      "action": "screenshot"
+    }
+  ]
+}

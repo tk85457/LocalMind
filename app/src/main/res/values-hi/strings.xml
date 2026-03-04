@@ -1,0 +1,155 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LocalMind</string>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="settings_appearance">उपस्थिति</string>
+    <string name="settings_storage">भंडारण</string>
+    <string name="settings_inference">अनुमान</string>
+    <string name="settings_about">के बारे में</string>
+    <string name="settings_clear_cache">कैश को साफ़ करें</string>
+    <string name="settings_storage_used">उपयोग किया गया भंडारण</string>
+    <string name="settings_temperature">तापमान</string>
+    <string name="settings_top_p">शीर्ष पी</string>
+    <string name="settings_max_tokens">अधिकतम टोकन</string>
+    <string name="settings_threads">प्रति वर्ग इकाई धागों की संख्या</string>
+    <string name="settings_model_loading">मॉडल लोडिंग सेटिंग्स</string>
+    <string name="settings_auto_offload">ऑटो ऑफलोड/लोड</string>
+    <string name="settings_auto_offload_desc">जब ऐप बैकग्राउंड में हो तो मॉडल को ऑफलोड करें</string>
+    <string name="settings_app">ऐप सेटिंग्स</string>
+    <string name="settings_select_language">भाषा चुने</string>
+    <string name="settings_close">बंद करना</string>
+    <string name="settings_language">भाषा</string>
+    <string name="settings_dark_mode">डार्क मोड</string>
+    <string name="settings_dark_mode_desc">डार्क/लाइट थीम टॉगल करें</string>
+
+    <string name="settings_export_options">निर्यात विकल्प</string>
+    <string name="settings_export_chats">चैट निर्यात करें</string>
+    <string name="settings_export_desc">सभी वार्तालापों को JSON में निर्यात करें.</string>
+    <string name="settings_export">निर्यात</string>
+    <string name="settings_exporting">चैट निर्यात कर रहा है...</string>
+    <string name="settings_clear_cache_desc">अस्थायी डेटा और कैश्ड मॉडल फ़ाइलें हटाएँ।</string>
+    <string name="settings_clear">स्पष्ट</string>
+    <string name="settings_repeat_penalty">पुन: दंड</string>
+    <string name="settings_context_size">प्रसंग आकार</string>
+    <string name="settings_context_size_desc">संदर्भ के लिए अधिकतम टोकन (जैसे 2048, 4096)</string>
+    <string name="settings_max_gen_tokens">मैक्स जेनरेशन टोकन</string>
+    <string name="settings_requires_reload">अगली प्रतिक्रिया से स्वचालित रूप से लागू होता है।</string>
+    <string name="settings_version">संस्करण</string>
+
+
+
+    <string name="chat_analyzing_document">दस्तावेज़ का विश्लेषण किया जा रहा है...</string>
+
+
+
+
+
+
+
+
+
+
+    <string name="navigation_failed_try_again">नेविगेशन विफल रहा. कृपया पुन: प्रयास करें।</string>
+    <string name="navigation_open_conversation_failed">यह वार्तालाप खुल नहीं सका.</string>
+    <string name="exit_dialog_title">क्या आप निश्चित हैं आपकी बाहर निकलने की इच्छा है?</string>
+    <string name="exit_dialog_exit">बाहर निकलना</string>
+    <string name="exit_dialog_cancel">रद्द करना</string>
+    <string name="restore_models_title">डाउनलोड किए गए मॉडल पुनर्स्थापित करें</string>
+    <string name="restore_models_body">डाउनलोड किए गए मॉडल गायब पाए गए। पुनः डाउनलोड किए बिना पुनर्स्थापित करने के लिए अपने मॉडल फ़ोल्डर को लिंक करें।</string>
+    <string name="restore_models_relink">फ़ोल्डर पुनः लिंक करें</string>
+    <string name="restore_models_later">बाद में</string>
+    <string name="drawer_title">स्थानीय मन</string>
+    <string name="drawer_chat">बात करना</string>
+    <string name="drawer_history">इतिहास</string>
+    <string name="drawer_model_library">मॉडल लाइब्रेरी</string>
+    <string name="drawer_hf_hub">हगिंग फेस हब</string>
+    <string name="drawer_import_model">आयात मॉडल</string>
+    <string name="drawer_benchmark">बेंचमार्क</string>
+    <string name="drawer_personas">व्यक्तित्व</string>
+    <string name="drawer_recent_chats">हाल की चैट</string>
+    <string name="drawer_untitled_chat">शीर्षक रहित चैट</string>
+    <string name="drawer_settings">सेटिंग्स</string>
+    <string name="drawer_today">आज</string>
+    <string name="drawer_yesterday">कल</string>
+    <string name="drawer_previous_7_days">पिछले 7 दिन</string>
+    <string name="drawer_previous_30_days">पिछले 30 दिन</string>
+    <string name="drawer_older">पुराने</string>
+
+
+    <string name="model_hub_title">मॉडल लाइब्रेरी</string>
+    <string name="model_hub_badge_hf">एचएफ</string>
+    <string name="model_hub_phone_title">फ़ोन-संगत एलएलएम</string>
+    <string name="model_hub_phone_subtitle">क्यूरेटेड मॉडल जो आपके फ़ोन पर ऑफ़लाइन चलते हैं</string>
+    <string name="model_hub_search_hint">मॉडल खोजें...</string>
+    <string name="model_hub_models_available">%1$d मॉडल उपलब्ध हैं</string>
+    <string name="model_hub_no_models_match">कोई भी मॉडल आपकी खोज से मेल नहीं खाता</string>
+    <string name="model_hub_load_more">और लोड करें</string>
+    <string name="model_hub_not_compatible">आपके फ़ोन के लिए संगत नहीं है</string>
+    <string name="model_hub_downloading_name">%1$s डाउनलोड हो रहा है...</string>
+    <string name="model_hub_download">डाउनलोड करना</string>
+    <string name="model_hub_force_download">बल डाउनलोड</string>
+    <string name="model_hub_incompatible">असंगत</string>
+    <string name="model_hub_activate">सक्रिय करें</string>
+    <string name="model_hub_force_activate">बलपूर्वक सक्रिय करें</string>
+    <string name="model_hub_active">सक्रिय</string>
+    <string name="model_hub_cloud_active">बादल सक्रिय</string>
+    <string name="model_hub_cloud_run">बादल भागो</string>
+    <string name="model_hub_runs_locally">स्थानीय रूप से चलता है</string>
+    <string name="model_hub_use_in_cloud">क्लाउड में उपयोग करें</string>
+    <string name="model_hub_unsupported">असमर्थित</string>
+    <string name="model_hub_variant">प्रकार</string>
+    <string name="model_hub_variant_incompatible_suffix">(असंगत)</string>
+    <string name="model_hub_advanced_title">उन्नत पैरामीटर</string>
+    <string name="model_hub_advanced_current_runtime">वर्तमान: ctx %1$d, थ्रेड्स %2$d, अधिकतम टोकन %3$d</string>
+    <string name="model_hub_advanced_current_sampling">वर्तमान: तापमान %1$.2f, टॉपP %2$.2f, टॉपK %3$d, दोहराएँ %4$.2f</string>
+    <string name="model_hub_advanced_recommended_sampling">अनुशंसित: तापमान %1$.2f, टॉपP %2$.2f, टॉपK %3$d, दोहराएँ %4$.2f</string>
+    <string name="model_hub_eta_left">%1$s शेष</string>
+
+
+    <string name="model_manager_title">मॉडल लाइब्रेरी</string>
+    <string name="model_manager_tab_installed">स्थापित</string>
+    <string name="model_manager_tab_hugging_face">आलिंगन करता हुआ चेहरा</string>
+    <string name="model_manager_add_from_hf">एचएफ</string>
+    <string name="model_manager_online_hf_title">ऑनलाइन हगिंग फेस मॉडल्स</string>
+    <string name="model_manager_open_hub">केंद्र</string>
+    <string name="model_manager_download_count">%1$d डाउनलोड</string>
+    <string name="model_manager_like_count">%1$d पसंद है</string>
+    <string name="model_manager_download_progress">%1$s / %2$s</string>
+    <string name="model_manager_activation_locked">बल मोड की आवश्यकता है</string>
+    <string name="model_manager_vision_badge">दृष्टि</string>
+    <string name="model_manager_requires_token">टोकन की आवश्यकता है</string>
+    <string name="model_manager_detail_title">मॉडल विवरण</string>
+    <string name="model_manager_detail_unavailable">मॉडल विवरण अनुपलब्ध</string>
+    <string name="model_manager_detail_stats">%1$d डाउनलोड • %2$d पसंद</string>
+    <string name="model_manager_available_gguf">उपलब्ध GGUF फ़ाइलें</string>
+    <string name="model_manager_purge_title">पर्ज मॉडल?</string>
+    <string name="model_manager_purge_body">यह स्थानीय संग्रहण से %1$s को हटा देगा।</string>
+    <string name="model_manager_delete">मिटाना</string>
+    <string name="model_manager_empty_title">लाइब्रेरी खाली</string>
+    <string name="model_manager_empty_body">अपना पहला मॉडल आयात करें या नीचे लाइव हगिंग फेस जीजीयूएफ मॉडल ब्राउज़ करें।</string>
+    <string name="model_manager_import_model">आयात मॉडल</string>
+    <string name="model_memory_good">अच्छा</string>
+    <string name="model_memory_tight">याददाश्त मजबूत</string>
+    <string name="model_memory_low">कम मेमोरी</string>
+
+
+    <string name="ok">ठीक है</string>
+    <string name="cancel">रद्द करना</string>
+    <string name="delete">मिटाना</string>
+    <string name="confirm">पुष्टि करना</string>
+    <string name="loading">लोड हो रहा है...</string>
+</resources>

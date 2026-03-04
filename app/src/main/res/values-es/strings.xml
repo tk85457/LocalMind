@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LocalMind</string>
+
+    <!-- Splash Screen -->
+    <string name="splash_tagline">Tu CompaÃƒÂ±ero de IA Privado</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Bienvenido a LocalMind</string>
+    <string name="onboarding_welcome_desc">Ejecuta potentes modelos de IA completamente offline en tu dispositivo</string>
+    <string name="onboarding_privacy_title">100% Privado</string>
+    <string name="onboarding_privacy_desc">Sin nube, sin rastreo, sin recolecciÃƒÂ³n de datos. Todo se queda en tu dispositivo.</string>
+    <string name="onboarding_models_title">Modelos Flexibles</string>
+    <string name="onboarding_models_desc">Importa y ejecuta modelos GGUF de 2B a 8B parÃƒÂ¡metros</string>
+    <string name="onboarding_get_started">Comenzar</string>
+    <string name="onboarding_skip">Omitir</string>
+
+    <!-- Chat -->
+    <string name="chat_input_hint">Mensaje a LocalMindÃ¢â‚¬Â¦</string>
+    <string name="chat_send">Enviar</string>
+    <string name="chat_stop">Detener</string>
+    <string name="chat_regenerate">Regenerar</string>
+    <string name="chat_new_conversation">Nuevo Chat</string>
+    <string name="chat_no_model">NingÃƒÂºn modelo cargado</string>
+    <string name="chat_select_model">Selecciona un modelo para chatear</string>
+
+    <!-- Model Manager -->
+    <string name="models_title">Modelos</string>
+    <string name="models_import">Importar Modelo</string>
+    <string name="models_active">Activo</string>
+    <string name="models_activate">Activar</string>
+    <string name="models_delete">Eliminar</string>
+    <string name="models_no_models">No hay modelos instalados</string>
+    <string name="models_import_hint">Importa un modelo GGUF para comenzar</string>
+
+    <!-- Model Detail -->
+    <string name="model_detail_title">Detalles del Modelo</string>
+    <string name="model_detail_size">TamaÃƒÂ±o</string>
+    <string name="model_detail_quantization">CuantizaciÃƒÂ³n</string>
+    <string name="model_detail_context">Longitud de Contexto</string>
+    <string name="model_detail_installed">Instalado</string>
+    <string name="model_detail_parameters">ParÃƒÂ¡metros</string>
+
+    <!-- Import -->
+    <string name="import_title">Importar Modelo</string>
+    <string name="import_select_file">Seleccionar Archivo GGUF</string>
+    <string name="import_importing">Importando modeloÃ¢â‚¬Â¦</string>
+    <string name="import_success">Modelo importado exitosamente</string>
+    <string name="import_error">Error al importar modelo</string>
+    <string name="import_invalid_file">Archivo GGUF invÃƒÂ¡lido</string>
+
+    <!-- Settings -->
+    <string name="settings_title">ConfiguraciÃƒÂ³n</string>
+    <string name="settings_appearance">Apariencia</string>
+    <string name="settings_storage">Almacenamiento</string>
+    <string name="settings_inference">Inferencia</string>
+    <string name="settings_about">Acerca de</string>
+    <string name="settings_clear_cache">Borrar CachÃƒÂ©</string>
+    <string name="settings_storage_used">Almacenamiento Usado</string>
+    <string name="settings_temperature">Temperatura</string>
+    <string name="settings_top_p">Top P</string>
+    <string name="settings_max_tokens">Max Tokens</string>
+    <string name="settings_threads">Hilos</string>
+    <string name="settings_model_loading">Carga de Modelos</string>
+    <string name="settings_auto_offload">Auto Descarga/Carga</string>
+    <string name="settings_auto_offload_desc">Descargar modelo en segundo plano</string>
+    <string name="settings_app">ConfiguraciÃƒÂ³n de App</string>
+    <string name="settings_select_language">Seleccionar Idioma</string>
+    <string name="settings_close">Cerrar</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_dark_mode">Modo Oscuro</string>
+    <string name="settings_dark_mode_desc">Cambiar tema oscuro/claro</string>
+
+    <string name="settings_export_options">Opciones de ExportaciÃƒÂ³n</string>
+    <string name="settings_export_chats">Exportar Chats</string>
+    <string name="settings_export_desc">Exportar conversaciones a JSON.</string>
+    <string name="settings_export">Exportar</string>
+    <string name="settings_exporting">Exportando chatsÃ¢â‚¬Â¦</string>
+    <string name="settings_clear_cache_desc">Eliminar datos temporales.</string>
+    <string name="settings_clear">Borrar</string>
+    <string name="settings_repeat_penalty">PenalizaciÃƒÂ³n de RepeticiÃƒÂ³n</string>
+    <string name="settings_context_size">TamaÃƒÂ±o de Contexto</string>
+    <string name="settings_context_size_desc">Max tokens para contexto</string>
+    <string name="settings_max_gen_tokens">Max Tokens GeneraciÃƒÂ³n</string>
+    <string name="settings_requires_reload">Applies from next response automatically.</string>
+    <string name="settings_version">VersiÃƒÂ³n</string>
+
+
+    <!-- Benchmark -->
+    <string name="benchmark_title">Benchmark de Hardware</string>
+    <string name="benchmark_ram">RAM Disponible</string>
+    <string name="benchmark_cpu">NÃƒÂºcleos CPU</string>
+    <string name="benchmark_storage">Almacenamiento</string>
+    <string name="benchmark_run">Ejecutar Benchmark</string>
+    <string name="benchmark_running">Ejecutando benchmarkÃ¢â‚¬Â¦</string>
+
+    <!-- Conversation History -->
+    <string name="history_title">Conversaciones</string>
+    <string name="history_no_conversations">Sin conversaciones</string>
+    <string name="history_delete">Eliminar</string>
+    <string name="history_search">Buscar conversaciones</string>
+
+    <!-- Service -->
+    <string name="service_generating">Generando respuestaÃ¢â‚¬Â¦</string>
+    <string name="service_stop">Detener</string>
+    <string name="service_minimize">Minimizar</string>
+
+    <!-- Errors -->
+    <string name="error_insufficient_ram">RAM insuficiente</string>
+    <string name="error_model_load_failed">Error al cargar modelo</string>
+    <string name="error_model_corrupted">Archivo de modelo corrupto</string>
+    <string name="error_storage_full">Almacenamiento lleno</string>
+    <string name="error_generation_failed">GeneraciÃƒÂ³n fallida</string>
+    <string name="error_unknown">OcurriÃƒÂ³ un error desconocido</string>
+
+    <!-- Navigation and Exit -->
+    <string name="navigation_failed_try_again">Navigation failed. Please try again.</string>
+    <string name="navigation_open_conversation_failed">Could not open this conversation.</string>
+    <string name="exit_dialog_title">Are you sure you want to exit?</string>
+    <string name="exit_dialog_exit">Exit</string>
+    <string name="exit_dialog_cancel">Cancel</string>
+    <string name="restore_models_title">Restore downloaded models</string>
+    <string name="restore_models_body">Downloaded models were found missing. Link your model folder to restore without re-downloading.</string>
+    <string name="restore_models_relink">Relink folder</string>
+    <string name="restore_models_later">Later</string>
+    <string name="drawer_title">Local Mind</string>
+    <string name="drawer_chat">Chat</string>
+    <string name="drawer_history">History</string>
+    <string name="drawer_model_library">Model Library</string>
+    <string name="drawer_hf_hub">Hugging Face Hub</string>
+    <string name="drawer_import_model">Import Model</string>
+    <string name="drawer_benchmark">Benchmark</string>
+    <string name="drawer_personas">Personas</string>
+    <string name="drawer_recent_chats">Recent Chats</string>
+    <string name="drawer_untitled_chat">Untitled Chat</string>
+    <string name="drawer_settings">Settings</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Eliminar</string>
+    <string name="confirm">Confirmar</string>
+    <string name="loading">CargandoÃ¢â‚¬Â¦</string>
+
+    <!-- Model Hub + Manager -->
+    <string name="model_hub_title">Model Library</string>
+    <string name="model_hub_badge_hf">HF</string>
+    <string name="model_hub_phone_title">Phone-Compatible LLMs</string>
+    <string name="model_hub_phone_subtitle">Curated models that run offline on your phone</string>
+    <string name="model_hub_search_hint">Search models...</string>
+    <string name="model_hub_models_available">%1$d models available</string>
+    <string name="model_hub_no_models_match">No models match your search</string>
+    <string name="model_hub_load_more">Load More</string>
+    <string name="model_hub_not_compatible">Not compatible for your phone</string>
+    <string name="model_hub_downloading_name">Downloading %1$s...</string>
+    <string name="model_hub_download">Download</string>
+    <string name="model_hub_force_download">Force Download</string>
+    <string name="model_hub_incompatible">Incompatible</string>
+    <string name="model_hub_activate">Activate</string>
+    <string name="model_hub_force_activate">Force Activate</string>
+    <string name="model_hub_active">Active</string>
+    <string name="model_hub_unsupported">Unsupported</string>
+    <string name="model_hub_variant">Variant</string>
+    <string name="model_hub_variant_incompatible_suffix"> (incompatible)</string>
+    <string name="model_hub_advanced_title">Advanced Parameters</string>
+    <string name="model_hub_advanced_current_runtime">Current: ctx %1$d, threads %2$d, max tokens %3$d</string>
+    <string name="model_hub_advanced_current_sampling">Current: temp %1$.2f, topP %2$.2f, topK %3$d, repeat %4$.2f</string>
+    <string name="model_hub_advanced_recommended_sampling">Recommended: temp %1$.2f, topP %2$.2f, topK %3$d, repeat %4$.2f</string>
+    <string name="model_hub_eta_left">%1$s left</string>
+    <string name="model_manager_title">Model Library</string>
+    <string name="model_manager_tab_installed">Installed</string>
+    <string name="model_manager_tab_hugging_face">Hugging Face</string>
+    <string name="model_manager_open_hub">Hub</string>
+    <string name="model_manager_add_from_hf">HF</string>
+    <string name="model_manager_online_hf_title">Online Hugging Face Models</string>
+    <string name="model_manager_download_count">%1$d downloads</string>
+    <string name="model_manager_like_count">%1$d likes</string>
+    <string name="model_manager_download_progress">%1$s / %2$s</string>
+    <string name="model_manager_activation_locked">Needs force mode</string>
+    <string name="model_manager_vision_badge">Vision</string>
+    <string name="model_manager_requires_token">Requires Token</string>
+    <string name="model_manager_detail_title">Model Details</string>
+    <string name="model_manager_detail_unavailable">Model details unavailable</string>
+    <string name="model_manager_detail_stats">%1$d downloads ï¿½ %2$d likes</string>
+    <string name="model_manager_available_gguf">Available GGUF Files</string>
+    <string name="model_manager_purge_title">Purge model?</string>
+    <string name="model_manager_purge_body">This will remove %1$s from local storage.</string>
+    <string name="model_manager_delete">Delete</string>
+    <string name="model_manager_empty_title">Library Empty</string>
+    <string name="model_manager_empty_body">Import your first model or browse live Hugging Face GGUF models below.</string>
+    <string name="model_manager_import_model">Import Model</string>
+    <string name="model_memory_good">Good</string>
+    <string name="model_memory_tight">Memory Tight</string>
+    <string name="model_memory_low">Low Memory</string>
+    <string name="model_hub_cloud_active">Cloud Active</string>
+    <string name="model_hub_cloud_run">Cloud Run</string>
+    <string name="model_hub_runs_locally">Runs Locally</string>
+    <string name="model_hub_use_in_cloud">Use in Cloud</string>
+</resources>
+
+
+
