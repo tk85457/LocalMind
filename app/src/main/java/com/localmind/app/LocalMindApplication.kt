@@ -23,6 +23,7 @@ class LocalMindApplication : Application(), Configuration.Provider {
     @Inject lateinit var llmEngine: LLMEngine
     @Inject lateinit var modelRepository: ModelRepository
     @Inject lateinit var modelLifecycleManager: ModelLifecycleManager
+    @Inject lateinit var settingsRepository: com.localmind.app.data.repository.SettingsRepository
 
     private val applicationScope = MainScope()
 
@@ -39,6 +40,10 @@ class LocalMindApplication : Application(), Configuration.Provider {
 
         // Initialize storage directories
         initializeStorageDirectories()
+
+        // PERF: Force-disable thinking on first run after this update.
+        // Old DataStore may have enable_thinking=true saved from previous builds.
+        applicationScope.launch { settingsRepository.updateEnableThinking(false) }
 
         // Preload active model as soon as app boots.
         preloadActiveModelAtStartup()

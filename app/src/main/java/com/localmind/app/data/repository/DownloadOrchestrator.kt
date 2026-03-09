@@ -75,7 +75,7 @@ class DownloadOrchestrator @Inject constructor(
 
         workManager.enqueueUniqueWork(
             uniqueWorkName,
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.KEEP,
             workRequest
         )
         taskId

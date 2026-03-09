@@ -14,7 +14,12 @@ fun ConversationEntity.toDomain(): Conversation {
         messageCount = messageCount,
         systemPrompt = systemPrompt,
         summary = summary,
-        isHidden = isHidden
+        isHidden = isHidden,
+        isPinned = isPinned,
+        personaId = personaId,
+        totalTokens = totalTokens,
+        lastMessagePreview = lastMessagePreview,
+        lastMessageRole = lastMessageRole
     )
 }
 
@@ -29,6 +34,11 @@ fun Conversation.toEntity(): ConversationEntity {
         messageCount = messageCount,
         systemPrompt = systemPrompt,
         summary = summary,
-        isHidden = isHidden
+        isHidden = isHidden,
+        isPinned = isPinned,
+        personaId = personaId,
+        totalTokens = totalTokens,
+        lastMessagePreview = lastMessagePreview,
+        lastMessageRole = lastMessageRole
     )
 }

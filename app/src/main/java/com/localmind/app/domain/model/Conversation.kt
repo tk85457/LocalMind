@@ -10,5 +10,11 @@ data class Conversation(
     val messageCount: Int,
     val systemPrompt: String?,
     val summary: String? = null,
-    val isHidden: Boolean = false
+    val isHidden: Boolean = false,
+    // PocketPal WatermelonDB parity features
+    val isPinned: Boolean = false,           // Pinned conversations top pe dikhti hain
+    val personaId: String? = null,           // Linked persona (WatermelonDB relation)
+    val totalTokens: Int = 0,                // Total tokens used in this conversation
+    val lastMessagePreview: String? = null,  // Last message preview for list display
+    val lastMessageRole: String? = null      // "user" or "assistant" — for list icon
 )

@@ -23,7 +23,8 @@ object Constants {
     const val QUANTIZATION_Q5 = "Q5"
     const val QUANTIZATION_Q8 = "Q8"
 
-    // Context Limits
+    // Context Limits — single source of truth
+    const val MAX_CONTEXT_SIZE = 4960          // Hard cap: sabhi jagah yahi use hoga
     const val CONTEXT_SIZE_4GB = 1024
     const val CONTEXT_SIZE_6GB = 1536
     const val CONTEXT_SIZE_8GB = 2048

@@ -8,10 +8,24 @@
     <!-- Storage permissions not needed per SAF (Storage Access Framework) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <uses-feature
         android:name="android.hardware.touchscreen"
+        android:required="false" />
+
+    <!-- PocketPal parity: Hexagon DSP / NPU acceleration support -->
+    <!-- Qualcomm Snapdragon pe neural network ops accelerate hote hain -->
+    <!-- required=false: non-Snapdragon devices pe bhi app chalti rahegi -->
+    <uses-feature
+        android:name="android.hardware.chip.snpe"
+        android:required="false" />
+    <uses-feature
+        android:name="com.qti.feature.htp"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.chip.adreno"
         android:required="false" />
 
     <queries>

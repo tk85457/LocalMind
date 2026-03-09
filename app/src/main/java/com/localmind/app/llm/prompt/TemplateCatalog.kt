@@ -12,7 +12,9 @@ enum class TemplateFamily {
     PHI3,
     QWEN,
     GEMMA,
-    CHATML
+    CHATML,
+    DEEPSEEK,  // DeepSeek-R1 reasoning
+    QWQ        // QwQ reasoning
 }
 
 object TemplateCatalog {
@@ -24,64 +26,93 @@ object TemplateCatalog {
     const val TEMPLATE_GEMMA = "gemma"
     const val TEMPLATE_GEMMA2 = "gemma2"
     const val TEMPLATE_CHATML_DEFAULT = "chatml_default"
+    const val TEMPLATE_DEEPSEEK_R1 = "deepseek_r1"
+    const val TEMPLATE_QWQ = "qwq"
 
     private val templates = mapOf(
         TEMPLATE_LLAMA3 to TemplateSpec(
             id = TEMPLATE_LLAMA3,
             family = TemplateFamily.LLAMA3,
-            defaultSystemPrompt = "You are a helpful model.",
+            defaultSystemPrompt = "", // PERF: no default — persona se aata hai
             defaultStopTokens = listOf("<|eot_id|>", "<|end_of_text|>")
         ),
         TEMPLATE_LLAMA32 to TemplateSpec(
             id = TEMPLATE_LLAMA32,
             family = TemplateFamily.LLAMA3,
-            defaultSystemPrompt = "You are a helpful model.",
-            defaultStopTokens = listOf("<|eot_id|>", "<|end_of_text|>")
+            defaultSystemPrompt = "", // PERF: no default — persona se aata hai
+            // Llama-3.2 kadhi kadhi Gemma-style tags bhi generate karta hai
+            defaultStopTokens = listOf("<|eot_id|>", "<|end_of_text|>", "<start_of_turn>", "</start_of_turn>", "<end_of_turn>")
         ),
         TEMPLATE_PHI3 to TemplateSpec(
             id = TEMPLATE_PHI3,
             family = TemplateFamily.PHI3,
-            defaultSystemPrompt = "You are a concise and accurate model.",
+            defaultSystemPrompt = "", // PERF: no default — persona se aata hai
             defaultStopTokens = listOf("<|end|>")
         ),
         TEMPLATE_QWEN2 to TemplateSpec(
             id = TEMPLATE_QWEN2,
             family = TemplateFamily.QWEN,
-            defaultSystemPrompt = "You are Qwen, a helpful model.",
+            defaultSystemPrompt = "", // PERF: no default — persona se aata hai
             defaultStopTokens = listOf("<|im_end|>", "<|endoftext|>")
         ),
         TEMPLATE_QWEN25 to TemplateSpec(
             id = TEMPLATE_QWEN25,
             family = TemplateFamily.QWEN,
-            defaultSystemPrompt = "You are Qwen, a helpful model.",
+            defaultSystemPrompt = "", // PERF: no default — persona se aata hai
             defaultStopTokens = listOf("<|im_end|>", "<|endoftext|>")
         ),
         TEMPLATE_GEMMA to TemplateSpec(
             id = TEMPLATE_GEMMA,
             family = TemplateFamily.GEMMA,
-            defaultSystemPrompt = "You are a helpful model.",
-            defaultStopTokens = listOf("<end_of_turn>", "<|end_of_text|>")
+            defaultSystemPrompt = "", // PERF: no default — persona se aata hai
+            // POCKETPAL FIX: Complete Gemma stop tokens
+            defaultStopTokens = listOf("<end_of_turn>", "<|end_of_text|>", "<eos>", "<|endoftext|>")
         ),
         TEMPLATE_GEMMA2 to TemplateSpec(
             id = TEMPLATE_GEMMA2,
             family = TemplateFamily.GEMMA,
-            defaultSystemPrompt = "You are a helpful model.",
-            defaultStopTokens = listOf("<end_of_turn>", "<|end_of_text|>")
+            defaultSystemPrompt = "", // PERF: no default — persona se aata hai
+            // POCKETPAL FIX: Complete Gemma2 stop tokens
+            defaultStopTokens = listOf("<end_of_turn>", "<|end_of_text|>", "<eos>", "<|endoftext|>")
         ),
         TEMPLATE_CHATML_DEFAULT to TemplateSpec(
             id = TEMPLATE_CHATML_DEFAULT,
             family = TemplateFamily.CHATML,
-            defaultSystemPrompt = "You are a helpful model.",
+            defaultSystemPrompt = "", // PERF: no default — persona se aata hai
             defaultStopTokens = listOf("<|im_end|>", "</s>")
+        ),
+        // POCKETPAL FIX: DeepSeek-R1 reasoning model support
+        TEMPLATE_DEEPSEEK_R1 to TemplateSpec(
+            id = TEMPLATE_DEEPSEEK_R1,
+            family = TemplateFamily.DEEPSEEK,
+            defaultSystemPrompt = "", // PERF: no default — persona se aata hai
+            defaultStopTokens = listOf("<|im_end|>", "</s>", "<|end_of_sentence|>")
+        ),
+        // POCKETPAL FIX: QwQ reasoning model support
+        TEMPLATE_QWQ to TemplateSpec(
+            id = TEMPLATE_QWQ,
+            family = TemplateFamily.QWQ,
+            defaultSystemPrompt = "", // PERF: no default — persona se aata hai
+            defaultStopTokens = listOf("<|im_end|>", "</s>", "<|endoftext|>")
         )
     )
 
+    // POCKETPAL FIX: Complete stop tokens list (from PocketPal chat.ts)
     val safeFallbackStops: List<String> = listOf(
         "</s>",
         "<|eot_id|>",
         "<|end_of_text|>",
         "<|im_end|>",
-        "<end_of_turn>"
+        "<|EOT|>",
+        "<|END_OF_TURN_TOKEN|>",
+        "<|end_of_turn|>",
+        "<end_of_turn>",
+        "</end_of_turn>",
+        "<start_of_turn>",
+        "</start_of_turn>",
+        "<|endoftext|>",
+        "<|end|>",
+        "<|return|>"
     )
 
     fun get(templateId: String?): TemplateSpec {
@@ -107,6 +138,10 @@ object TemplateCatalog {
             normalized.contains("qwen") -> TEMPLATE_QWEN25
             normalized.contains("gemma2") || normalized.contains("gemma-2") -> TEMPLATE_GEMMA2
             normalized.contains("gemma") -> TEMPLATE_GEMMA
+            // POCKETPAL FIX: Reasoning model detection
+            normalized.contains("deepseek-r1") || normalized.contains("deepseek_r1") -> TEMPLATE_DEEPSEEK_R1
+            normalized.contains("qwq") -> TEMPLATE_QWQ
+            normalized.contains("deepseek") -> TEMPLATE_DEEPSEEK_R1
             else -> TEMPLATE_CHATML_DEFAULT
         }
     }

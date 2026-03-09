@@ -7,7 +7,7 @@ import com.localmind.app.core.storage.ModelStorageType
 import com.localmind.app.domain.model.CompatibilityMode
 import com.localmind.app.domain.model.InferenceMode
 import com.localmind.app.domain.model.RemoteProvider
-import com.localmind.app.domain.model.VisionMode
+
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -18,19 +18,55 @@ class SettingsRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) {
     companion object {
-        const val DEFAULT_CONTEXT_SIZE = 2048
-        const val DEFAULT_MAX_TOKENS = 1024
-        const val DEFAULT_TOP_K = 40
-        const val DEFAULT_GPU_LAYERS = -1 // -1 = Auto
-        const val DEFAULT_BATCH_SIZE = 2048       // was 512 — larger batch = faster prefill
-        const val DEFAULT_PHYSICAL_BATCH_SIZE = 512 // was 256
-        const val DEFAULT_FLASH_ATTENTION = "Auto"
-        const val DEFAULT_KEY_CACHE_TYPE = "F16"
-        const val DEFAULT_VALUE_CACHE_TYPE = "F16"
+        // ── Context Init Params (PocketPal contextInitParamsVersions.ts v2.1) ──
+        const val DEFAULT_CONTEXT_SIZE = 2048           // PocketPal: n_ctx = 2048
+        const val DEFAULT_BATCH_SIZE = 512              // PocketPal: n_batch = 512 (was 1024)
+        const val DEFAULT_PHYSICAL_BATCH_SIZE = 512     // PocketPal: n_ubatch = 512
+        const val DEFAULT_GPU_LAYERS = 99               // PocketPal: n_gpu_layers = 99 (all layers, auto) (was 0)
+        const val DEFAULT_USE_MLOCK = false             // PocketPal: use_mlock = false
+        const val DEFAULT_USE_MMAP = true               // Used only as boolean fallback; "Smart" is the real default
+        const val DEFAULT_USE_MMAP_MODE = "Smart"          // PocketPal: use_mmap = smart (Android)
+        // PocketPal: flash_attn_type = 'off' on Android (only 'auto' on iOS)
+        const val DEFAULT_FLASH_ATTENTION = false
+        // PocketPal Android default: F16 (safe, compatible with all devices)
+        const val DEFAULT_KEY_CACHE_TYPE = "F16"        // PocketPal: cache_type_k = 'f16'
+        const val DEFAULT_VALUE_CACHE_TYPE = "F16"      // PocketPal: cache_type_v = 'f16'
+        const val DEFAULT_KV_UNIFIED = true             // PocketPal: kv_unified = true (CRITICAL memory saving)
+        const val DEFAULT_IMAGE_MAX_TOKENS = 512        // PocketPal: image_max_tokens = 512
+
+        // ── Completion Params (PocketPal completionSettingsVersions.ts v3) ──
+        const val DEFAULT_MAX_TOKENS = 1024             // PocketPal: n_predict = 1024
+        const val DEFAULT_TOP_K = 40                    // PocketPal: top_k = 40
+        const val DEFAULT_TOP_P = 0.95f                 // PocketPal: top_p = 0.95 (was 0.9)
+        const val DEFAULT_MIN_P = 0.05f                 // PocketPal: min_p = 0.05
+        const val DEFAULT_XTC_THRESHOLD = 0.1f          // PocketPal: xtc_threshold = 0.1
+        const val DEFAULT_XTC_PROBABILITY = 0.0f        // PocketPal: xtc_probability = 0.0 (disabled)
+        const val DEFAULT_TYPICAL_P = 1.0f              // PocketPal: typical_p = 1.0 (disabled)
+        const val DEFAULT_PENALTY_LAST_N = 64           // PocketPal: penalty_last_n = 64 (was 128)
+        const val DEFAULT_PENALTY_REPEAT = 1.0f         // PocketPal: penalty_repeat = 1.0
+        const val DEFAULT_PENALTY_FREQ = 0.0f           // PocketPal: penalty_freq = 0.0 (disabled)
+        const val DEFAULT_PENALTY_PRESENT = 0.0f        // PocketPal: penalty_present = 0.0 (disabled)
+        const val DEFAULT_MIROSTAT = 0                  // PocketPal: mirostat = 0 (off)
+        const val DEFAULT_MIROSTAT_TAU = 5.0f           // PocketPal: mirostat_tau = 5.0
+        const val DEFAULT_MIROSTAT_ETA = 0.1f           // PocketPal: mirostat_eta = 0.1
+        const val DEFAULT_SEED = -1                     // PocketPal: seed = -1 (random)
+        const val DEFAULT_N_PROBS = 0                   // PocketPal: n_probs = 0
+        // TTFT FIX: jinja=false by default — native template path mein engineMutex
+        // contention + extra JNI overhead hai. PromptBuilderService path faster hai for now.
+        // Jab generateWithMessages flow optimize ho tab true karna.
+        const val DEFAULT_JINJA = true                  // PocketPal: jinja = true
+        const val DEFAULT_ENABLE_THINKING = false       // PERF: thinking disabled by default — 2-3x speedup on non-reasoning models
+        const val DEFAULT_INCLUDE_THINKING_IN_CONTEXT = false // PERF: no thinking = no context overhead
+
+        // ── Other Settings ──
+        const val DEFAULT_CACHE_PROMPT = true
+        const val DEFAULT_DEFRAG_THRESHOLD = 0.1f
+        const val DEFAULT_SPECULATIVE_DECODING = true
+        const val DEFAULT_MIN_N_CTX = 1024
     }
 
     private object PreferencesKeys {
-        val CONTEXT_SIZE = intPreferencesKey("context_size")
+        val CONTEXT_SIZE = intPreferencesKey("context_size_v2")
         val MEMORY_MAPPING = stringPreferencesKey("memory_mapping")
         val AUTO_OFFLOAD = booleanPreferencesKey("auto_offload")
         val LANGUAGE = stringPreferencesKey("language")
@@ -39,7 +75,6 @@ class SettingsRepository @Inject constructor(
 
         // Existing inference params (moved to repository for persistence)
         val TEMPERATURE = floatPreferencesKey("temperature")
-        val TOP_P = floatPreferencesKey("top_p")
         val MAX_TOKENS = intPreferencesKey("max_tokens")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val REPEAT_PENALTY = floatPreferencesKey("repeat_penalty")
@@ -54,7 +89,7 @@ class SettingsRepository @Inject constructor(
         val COMPAT_MODE = stringPreferencesKey("compat_mode")
         val ALLOW_FORCE_LOAD = booleanPreferencesKey("allow_force_load")
         val INFERENCE_MODE = stringPreferencesKey("inference_mode")
-        val VISION_MODE = stringPreferencesKey("vision_mode")
+
         val REMOTE_FALLBACK_ENABLED = booleanPreferencesKey("remote_fallback_enabled")
         val REMOTE_PROVIDER = stringPreferencesKey("remote_provider")
         val CATALOG_CURSOR_PAGING = booleanPreferencesKey("catalog_cursor_paging")
@@ -74,9 +109,37 @@ class SettingsRepository @Inject constructor(
         // Advanced Inference
         val BATCH_SIZE = intPreferencesKey("batch_size")
         val PHYSICAL_BATCH_SIZE = intPreferencesKey("physical_batch_size")
-        val FLASH_ATTENTION = stringPreferencesKey("flash_attention")
+        val FLASH_ATTENTION = booleanPreferencesKey("flash_attention")
         val KEY_CACHE_TYPE = stringPreferencesKey("key_cache_type")
         val VALUE_CACHE_TYPE = stringPreferencesKey("value_cache_type")
+
+        // Advanced Inference Settings
+        val PENALTY_LAST_N = intPreferencesKey("penalty_last_n")
+        val CACHE_PROMPT = booleanPreferencesKey("cache_prompt")
+        val USE_MLOCK = booleanPreferencesKey("use_mlock_v2")
+        val USE_MMAP = booleanPreferencesKey("use_mmap")
+        val DEFRAG_THRESHOLD = floatPreferencesKey("defrag_threshold")
+        val SPECULATIVE_DECODING = booleanPreferencesKey("speculative_decoding")
+        val MIN_N_CTX = intPreferencesKey("min_n_ctx")
+        val KV_UNIFIED = booleanPreferencesKey("kv_unified")
+        val IMAGE_MAX_TOKENS = intPreferencesKey("image_max_tokens")
+        // Completion Params (PocketPal parity)
+        val MIN_P = floatPreferencesKey("min_p")
+        val SEED = intPreferencesKey("seed")
+        val TOP_P = floatPreferencesKey("top_p_v2")  // new key to avoid legacy conflict
+        val XTC_THRESHOLD = floatPreferencesKey("xtc_threshold")
+        val XTC_PROBABILITY = floatPreferencesKey("xtc_probability")
+        val TYPICAL_P = floatPreferencesKey("typical_p")
+        val PENALTY_REPEAT = floatPreferencesKey("penalty_repeat")
+        val PENALTY_FREQ = floatPreferencesKey("penalty_freq")
+        val PENALTY_PRESENT = floatPreferencesKey("penalty_present")
+        val MIROSTAT = intPreferencesKey("mirostat")
+        val MIROSTAT_TAU = floatPreferencesKey("mirostat_tau")
+        val MIROSTAT_ETA = floatPreferencesKey("mirostat_eta")
+        val N_PROBS = intPreferencesKey("n_probs")
+        val JINJA = booleanPreferencesKey("jinja")
+        val ENABLE_THINKING = booleanPreferencesKey("enable_thinking")
+        val INCLUDE_THINKING_IN_CONTEXT = booleanPreferencesKey("include_thinking_in_context")
     }
 
     val contextSize: Flow<Int> = dataStore.data.map { it[PreferencesKeys.CONTEXT_SIZE] ?: DEFAULT_CONTEXT_SIZE }
@@ -87,7 +150,7 @@ class SettingsRepository @Inject constructor(
     val autoNavigateChat: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.AUTO_NAVIGATE_CHAT] ?: true }
 
     val temperature: Flow<Float> = dataStore.data.map { it[PreferencesKeys.TEMPERATURE] ?: 0.7f }
-    val topP: Flow<Float> = dataStore.data.map { it[PreferencesKeys.TOP_P] ?: 0.9f }
+    val topP: Flow<Float> = dataStore.data.map { it[PreferencesKeys.TOP_P] ?: DEFAULT_TOP_P }  // PocketPal: 0.95
     val maxTokens: Flow<Int> = dataStore.data.map { it[PreferencesKeys.MAX_TOKENS] ?: DEFAULT_MAX_TOKENS }
     val repeatPenalty: Flow<Float> = dataStore.data.map { it[PreferencesKeys.REPEAT_PENALTY] ?: 1.1f }
     val threadCount: Flow<Int> = dataStore.data.map {
@@ -100,12 +163,40 @@ class SettingsRepository @Inject constructor(
     val batchSize: Flow<Int> = dataStore.data.map { it[PreferencesKeys.BATCH_SIZE] ?: DEFAULT_BATCH_SIZE }
     val physicalBatchSize: Flow<Int> =
         dataStore.data.map { it[PreferencesKeys.PHYSICAL_BATCH_SIZE] ?: DEFAULT_PHYSICAL_BATCH_SIZE }
-    val flashAttention: Flow<String> =
+    val flashAttention: Flow<Boolean> =
         dataStore.data.map { it[PreferencesKeys.FLASH_ATTENTION] ?: DEFAULT_FLASH_ATTENTION }
     val keyCacheType: Flow<String> =
         dataStore.data.map { it[PreferencesKeys.KEY_CACHE_TYPE] ?: DEFAULT_KEY_CACHE_TYPE }
     val valueCacheType: Flow<String> =
         dataStore.data.map { it[PreferencesKeys.VALUE_CACHE_TYPE] ?: DEFAULT_VALUE_CACHE_TYPE }
+
+    // New Advanced Settings Flows
+    val penaltyLastN: Flow<Int> = dataStore.data.map { it[PreferencesKeys.PENALTY_LAST_N] ?: DEFAULT_PENALTY_LAST_N }
+    val cachePrompt: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.CACHE_PROMPT] ?: DEFAULT_CACHE_PROMPT }
+    val useMlock: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.USE_MLOCK] ?: DEFAULT_USE_MLOCK }
+    val useMmap: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.USE_MMAP] ?: DEFAULT_USE_MMAP }
+    val defragThreshold: Flow<Float> = dataStore.data.map { it[PreferencesKeys.DEFRAG_THRESHOLD] ?: DEFAULT_DEFRAG_THRESHOLD }
+    val speculativeDecoding: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.SPECULATIVE_DECODING] ?: DEFAULT_SPECULATIVE_DECODING }
+    val minNCtx: Flow<Int> = dataStore.data.map { it[PreferencesKeys.MIN_N_CTX] ?: DEFAULT_MIN_N_CTX }
+    // PocketPal Completion Params — all flows
+    val minP: Flow<Float> = dataStore.data.map { it[PreferencesKeys.MIN_P] ?: DEFAULT_MIN_P }
+    val seed: Flow<Int> = dataStore.data.map { it[PreferencesKeys.SEED] ?: DEFAULT_SEED }
+    val xtcThreshold: Flow<Float> = dataStore.data.map { it[PreferencesKeys.XTC_THRESHOLD] ?: DEFAULT_XTC_THRESHOLD }
+    val xtcProbability: Flow<Float> = dataStore.data.map { it[PreferencesKeys.XTC_PROBABILITY] ?: DEFAULT_XTC_PROBABILITY }
+    val typicalP: Flow<Float> = dataStore.data.map { it[PreferencesKeys.TYPICAL_P] ?: DEFAULT_TYPICAL_P }
+    val penaltyRepeat: Flow<Float> = dataStore.data.map { it[PreferencesKeys.PENALTY_REPEAT] ?: DEFAULT_PENALTY_REPEAT }
+    val penaltyFreq: Flow<Float> = dataStore.data.map { it[PreferencesKeys.PENALTY_FREQ] ?: DEFAULT_PENALTY_FREQ }
+    val penaltyPresent: Flow<Float> = dataStore.data.map { it[PreferencesKeys.PENALTY_PRESENT] ?: DEFAULT_PENALTY_PRESENT }
+    val mirostat: Flow<Int> = dataStore.data.map { it[PreferencesKeys.MIROSTAT] ?: DEFAULT_MIROSTAT }
+    val mirostatTau: Flow<Float> = dataStore.data.map { it[PreferencesKeys.MIROSTAT_TAU] ?: DEFAULT_MIROSTAT_TAU }
+    val mirostatEta: Flow<Float> = dataStore.data.map { it[PreferencesKeys.MIROSTAT_ETA] ?: DEFAULT_MIROSTAT_ETA }
+    val nProbs: Flow<Int> = dataStore.data.map { it[PreferencesKeys.N_PROBS] ?: DEFAULT_N_PROBS }
+    val jinja: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.JINJA] ?: DEFAULT_JINJA }
+    val enableThinking: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.ENABLE_THINKING] ?: DEFAULT_ENABLE_THINKING }
+    val includeThinkingInContext: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.INCLUDE_THINKING_IN_CONTEXT] ?: DEFAULT_INCLUDE_THINKING_IN_CONTEXT }
+    // Context Init Params
+    val kvUnified: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.KV_UNIFIED] ?: DEFAULT_KV_UNIFIED }
+    val imageMaxTokens: Flow<Int> = dataStore.data.map { it[PreferencesKeys.IMAGE_MAX_TOKENS] ?: DEFAULT_IMAGE_MAX_TOKENS }
 
     val onboardingCompleted: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.ONBOARDING_COMPLETED] ?: false }
     val showAdvancedSettings: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.SHOW_ADVANCED_SETTINGS] ?: false }
@@ -121,9 +212,7 @@ class SettingsRepository @Inject constructor(
     val inferenceMode: Flow<InferenceMode> = dataStore.data.map {
         InferenceMode.fromStored(it[PreferencesKeys.INFERENCE_MODE])
     }
-    val visionMode: Flow<VisionMode> = dataStore.data.map {
-        VisionMode.fromStored(it[PreferencesKeys.VISION_MODE])
-    }
+
     val remoteFallbackEnabled: Flow<Boolean> =
         dataStore.data.map { it[PreferencesKeys.REMOTE_FALLBACK_ENABLED] ?: true }
     val remoteProvider: Flow<RemoteProvider> = dataStore.data.map {
@@ -189,9 +278,7 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[PreferencesKeys.INFERENCE_MODE] = mode.name }
     }
 
-    suspend fun setVisionMode(mode: VisionMode) {
-        dataStore.edit { it[PreferencesKeys.VISION_MODE] = mode.name }
-    }
+
 
     suspend fun setRemoteFallbackEnabled(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.REMOTE_FALLBACK_ENABLED] = enabled }
@@ -267,10 +354,6 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[PreferencesKeys.TEMPERATURE] = value }
     }
 
-    suspend fun updateTopP(value: Float) {
-        dataStore.edit { it[PreferencesKeys.TOP_P] = value }
-    }
-
     suspend fun updateMaxTokens(value: Int) {
         dataStore.edit { it[PreferencesKeys.MAX_TOKENS] = value }
     }
@@ -323,8 +406,8 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[PreferencesKeys.PHYSICAL_BATCH_SIZE] = size }
     }
 
-    suspend fun updateFlashAttention(mode: String) {
-        dataStore.edit { it[PreferencesKeys.FLASH_ATTENTION] = mode }
+    suspend fun updateFlashAttention(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.FLASH_ATTENTION] = enabled }
     }
 
     suspend fun updateKeyCacheType(type: String) {
@@ -335,11 +418,129 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[PreferencesKeys.VALUE_CACHE_TYPE] = type }
     }
 
+    suspend fun updatePenaltyLastN(value: Int) {
+        dataStore.edit { it[PreferencesKeys.PENALTY_LAST_N] = value }
+    }
+
+    suspend fun updateCachePrompt(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.CACHE_PROMPT] = enabled }
+    }
+
+    suspend fun updateUseMlock(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.USE_MLOCK] = enabled }
+    }
+
+    suspend fun updateUseMmap(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.USE_MMAP] = enabled }
+    }
+
+    suspend fun updateDefragThreshold(value: Float) {
+        dataStore.edit { it[PreferencesKeys.DEFRAG_THRESHOLD] = value }
+    }
+
+    suspend fun updateSpeculativeDecoding(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SPECULATIVE_DECODING] = enabled }
+    }
+
+    suspend fun updateMinNCtx(value: Int) {
+        dataStore.edit { it[PreferencesKeys.MIN_N_CTX] = value }
+    }
+
+    suspend fun updateMinP(value: Float) {
+        dataStore.edit { it[PreferencesKeys.MIN_P] = value }
+    }
+
+    suspend fun updateSeed(value: Int) {
+        dataStore.edit { it[PreferencesKeys.SEED] = value }
+    }
+
+    // ── New PocketPal Parity update functions ──
+    suspend fun updateXtcThreshold(value: Float) { dataStore.edit { it[PreferencesKeys.XTC_THRESHOLD] = value } }
+    suspend fun updateXtcProbability(value: Float) { dataStore.edit { it[PreferencesKeys.XTC_PROBABILITY] = value } }
+    suspend fun updateTypicalP(value: Float) { dataStore.edit { it[PreferencesKeys.TYPICAL_P] = value } }
+    suspend fun updatePenaltyRepeat(value: Float) { dataStore.edit { it[PreferencesKeys.PENALTY_REPEAT] = value } }
+    suspend fun updatePenaltyFreq(value: Float) { dataStore.edit { it[PreferencesKeys.PENALTY_FREQ] = value } }
+    suspend fun updatePenaltyPresent(value: Float) { dataStore.edit { it[PreferencesKeys.PENALTY_PRESENT] = value } }
+    suspend fun updateMirostat(value: Int) { dataStore.edit { it[PreferencesKeys.MIROSTAT] = value } }
+    suspend fun updateMirostatTau(value: Float) { dataStore.edit { it[PreferencesKeys.MIROSTAT_TAU] = value } }
+    suspend fun updateMirostatEta(value: Float) { dataStore.edit { it[PreferencesKeys.MIROSTAT_ETA] = value } }
+    suspend fun updateNProbs(value: Int) { dataStore.edit { it[PreferencesKeys.N_PROBS] = value } }
+    suspend fun updateJinja(enabled: Boolean) { dataStore.edit { it[PreferencesKeys.JINJA] = enabled } }
+    suspend fun updateEnableThinking(enabled: Boolean) { dataStore.edit { it[PreferencesKeys.ENABLE_THINKING] = enabled } }
+    suspend fun updateIncludeThinkingInContext(enabled: Boolean) { dataStore.edit { it[PreferencesKeys.INCLUDE_THINKING_IN_CONTEXT] = enabled } }
+    suspend fun updateKvUnified(enabled: Boolean) { dataStore.edit { it[PreferencesKeys.KV_UNIFIED] = enabled } }
+    suspend fun updateImageMaxTokens(value: Int) { dataStore.edit { it[PreferencesKeys.IMAGE_MAX_TOKENS] = value } }
+    suspend fun updateTopP(value: Float) { dataStore.edit { it[PreferencesKeys.TOP_P] = value } }
+
     private fun defaultThreadCount(): Int {
-        return (Runtime.getRuntime().availableProcessors() - 1).coerceIn(2, 8)
+        // PocketPal formula: Math.floor(cores * 0.8) — same as getRecommendedThreadCount()
+        val cores = Runtime.getRuntime().availableProcessors()
+        return (cores * 0.8).toInt().coerceIn(1, cores)
     }
 
     private fun defaultGpuLayers(): Int {
         return DEFAULT_GPU_LAYERS
     }
+
+    // FIX #1: Single flow that emits a fully-populated CachedSettings snapshot whenever
+    // ANY pref changes. Since DataStore writes all prefs to a single file, every pref
+    // change triggers one emission here — we then read every value from the same snapshot.
+    // This replaces 23 parallel .first() calls per message with zero disk reads at inference time.
+    fun allSettingsFlow(): kotlinx.coroutines.flow.Flow<ChatViewModelSettings> {
+        return dataStore.data.map { prefs ->
+            ChatViewModelSettings(
+                temperature = prefs[PreferencesKeys.TEMPERATURE] ?: 0.7f,
+                maxTokens = prefs[PreferencesKeys.MAX_TOKENS] ?: DEFAULT_MAX_TOKENS,
+                topP = prefs[PreferencesKeys.TOP_P] ?: DEFAULT_TOP_P,
+                contextSize = prefs[PreferencesKeys.CONTEXT_SIZE] ?: DEFAULT_CONTEXT_SIZE,
+                penaltyRepeat = prefs[PreferencesKeys.PENALTY_REPEAT] ?: DEFAULT_PENALTY_REPEAT,
+                topK = prefs[PreferencesKeys.TOP_K] ?: DEFAULT_TOP_K,
+                threadCount = prefs[PreferencesKeys.THREAD_COUNT] ?: defaultThreadCount(),
+                showAdvancedSettings = prefs[PreferencesKeys.SHOW_ADVANCED_SETTINGS] ?: false,
+                minP = prefs[PreferencesKeys.MIN_P] ?: DEFAULT_MIN_P,
+                seed = prefs[PreferencesKeys.SEED] ?: DEFAULT_SEED,
+                xtcThreshold = prefs[PreferencesKeys.XTC_THRESHOLD] ?: DEFAULT_XTC_THRESHOLD,
+                xtcProbability = prefs[PreferencesKeys.XTC_PROBABILITY] ?: DEFAULT_XTC_PROBABILITY,
+                typicalP = prefs[PreferencesKeys.TYPICAL_P] ?: DEFAULT_TYPICAL_P,
+                penaltyLastN = prefs[PreferencesKeys.PENALTY_LAST_N] ?: DEFAULT_PENALTY_LAST_N,
+                penaltyFreq = prefs[PreferencesKeys.PENALTY_FREQ] ?: DEFAULT_PENALTY_FREQ,
+                penaltyPresent = prefs[PreferencesKeys.PENALTY_PRESENT] ?: DEFAULT_PENALTY_PRESENT,
+                mirostat = prefs[PreferencesKeys.MIROSTAT] ?: DEFAULT_MIROSTAT,
+                mirostatTau = prefs[PreferencesKeys.MIROSTAT_TAU] ?: DEFAULT_MIROSTAT_TAU,
+                mirostatEta = prefs[PreferencesKeys.MIROSTAT_ETA] ?: DEFAULT_MIROSTAT_ETA,
+                nProbs = prefs[PreferencesKeys.N_PROBS] ?: DEFAULT_N_PROBS,
+                jinja = prefs[PreferencesKeys.JINJA] ?: DEFAULT_JINJA,
+                enableThinking = prefs[PreferencesKeys.ENABLE_THINKING] ?: DEFAULT_ENABLE_THINKING,
+                includeThinkingInContext = prefs[PreferencesKeys.INCLUDE_THINKING_IN_CONTEXT] ?: DEFAULT_INCLUDE_THINKING_IN_CONTEXT
+            )
+        }
+    }
 }
+
+// FIX #1: Separate data class in repository package to avoid circular dependency.
+// ChatViewModel.CachedSettings wraps this.
+data class ChatViewModelSettings(
+    val temperature: Float,
+    val maxTokens: Int,
+    val topP: Float,
+    val contextSize: Int,
+    val penaltyRepeat: Float,
+    val topK: Int,
+    val threadCount: Int,
+    val showAdvancedSettings: Boolean,
+    val minP: Float,
+    val seed: Int,
+    val xtcThreshold: Float,
+    val xtcProbability: Float,
+    val typicalP: Float,
+    val penaltyLastN: Int,
+    val penaltyFreq: Float,
+    val penaltyPresent: Float,
+    val mirostat: Int,
+    val mirostatTau: Float,
+    val mirostatEta: Float,
+    val nProbs: Int,
+    val jinja: Boolean,
+    val enableThinking: Boolean,
+    val includeThinkingInContext: Boolean
+)

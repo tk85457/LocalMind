@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -85,6 +86,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -103,7 +105,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -138,11 +139,13 @@ import com.localmind.app.ui.components.ChatMessageList
 import com.localmind.app.ui.theme.NeonElevated
 import com.localmind.app.ui.theme.NeonError
 import com.localmind.app.ui.theme.NeonPrimary
+import com.localmind.app.ui.theme.NeonPrimaryVariant
 import com.localmind.app.ui.theme.NeonSurface
 import com.localmind.app.ui.theme.NeonText
 import com.localmind.app.ui.theme.NeonTextExtraMuted
 import com.localmind.app.ui.theme.NeonTextSecondary
 import com.localmind.app.ui.viewmodel.Attachment
+import com.localmind.app.data.local.entity.PromptTemplateEntity
 import com.localmind.app.ui.components.ThinkingBubble
 import com.localmind.app.ui.components.ThinkingIndicator
 import com.localmind.app.core.utils.STTHelper
@@ -160,28 +163,26 @@ fun ChatScreen(
 
     onNavigateToModels: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    onNavigateToPersonas: () -> Unit = {},
     onOpenDrawer: () -> Unit = {},
+    onNavigateToPersonaManagement: () -> Unit = {},
+    onNavigateToPromptTemplates: () -> Unit = {},
     viewModel: ChatViewModel = hiltViewModel()
 ) {
+    // STREAMING FIX: state aur streamingText alag collect karo.
+    // state: messages, isGenerating, etc. — infrequent changes
+    // streamingText: har 32ms badalta hai — sirf streaming bubble recompose hoga
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val streamingText by viewModel.streamingText.collectAsStateWithLifecycle()
+    val streamingReasoningText by viewModel.streamingReasoningText.collectAsStateWithLifecycle()
+    val focusManager = LocalFocusManager.current
     var inputText by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
     var showSearch by remember { mutableStateOf(false) }
-    var showRenameDialog by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(false) }
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val context = LocalContext.current
     val dimens = com.localmind.app.ui.theme.LocalDimens.current
-
-    val showScrollToBottom by remember {
-        androidx.compose.runtime.derivedStateOf {
-            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
-            lastVisibleItem != null && lastVisibleItem.index < listState.layoutInfo.totalItemsCount - 2
-        }
-    }
 
     // Consolidated single attachment launcher – accepts images AND PDFs in one picker
     val attachFileLauncher = rememberLauncherForActivityResult(
@@ -233,6 +234,8 @@ fun ChatScreen(
     }
 
 
+
+
     // TTS Setup
     var tts: TextToSpeech? by remember { mutableStateOf(null) }
     var showVoiceSelector by remember { mutableStateOf(false) }
@@ -266,34 +269,40 @@ fun ChatScreen(
         }
     }
 
+    // Screen on rakhne ke liye FLAG_KEEP_SCREEN_ON use karo — PARTIAL_WAKE_LOCK sirf CPU on rakhta hai.
+    // Window flag approach: Compose mein sabse reliable tarika.
+    val activity = context as? android.app.Activity
+    DisposableEffect(state.isGenerating) {
+        if (state.isGenerating) {
+            activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
     LaunchedEffect(conversationId) {
         viewModel.bootstrapConversation(conversationId)
     }
 
-    // Auto-scroll: unified single scroll handler.
-    // BUGFIX: Old code had TWO competing LaunchedEffects both scrolling simultaneously,
-    // causing jank and fighting each other during generation.
-    // New: one effect handles all cases — streaming uses fast snapScroll,
-    // new messages/keyboard use animated scroll.
-    LaunchedEffect(state.isGenerating) {
-        if (state.isGenerating) {
-            while (true) {
-                val totalItems = listState.layoutInfo.totalItemsCount
-                if (totalItems > 0) {
-                    listState.scrollToItem(totalItems - 1, scrollOffset = Int.MAX_VALUE)
-                }
-                kotlinx.coroutines.delay(80) // ~12fps scroll tracking during streaming
-            }
+    // PocketPal-style: App open hote hi active model auto-load karo
+    // Ye sirf ek baar chalega jab model null ho ya loaded na ho
+    LaunchedEffect(state.activeModel) {
+        if (state.activeModel != null && !state.isLoadingModel && !state.isGenerating) {
+            viewModel.ensureModelLoaded()
         }
     }
 
-    // Scroll on new messages or keyboard appearance (only when NOT generating)
-    LaunchedEffect(state.messages.size, WindowInsets.ime.getBottom(LocalDensity.current)) {
-        if (!state.isGenerating) {
-            val totalItems = state.messages.size
-            if (totalItems > 0) {
-                listState.animateScrollToItem(totalItems - 1, scrollOffset = Int.MAX_VALUE)
-            }
+    // POCKETPAL FIX: Purana 80ms polling loop hataya.
+    // Auto-scroll ab ChatMessageList ke andar handle hota hai — PocketPal style.
+    // reverseLayout=true + derivedStateOf(atLatest) + LaunchedEffect(streamLen) = smooth auto-scroll.
+    // Yahan sirf keyboard open hone par scroll karo (IME aane par newest content dikhao).
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    androidx.compose.runtime.LaunchedEffect(imeBottom) {
+        if (imeBottom > 0 && listState.firstVisibleItemIndex == 0) {
+            listState.animateScrollToItem(0)
         }
     }
 
@@ -311,11 +320,11 @@ fun ChatScreen(
                 },
                 title = {
                     val persona = state.selectedPersona ?: com.localmind.app.domain.model.Persona.DEFAULT_ASSISTANT
-                    var showPersonaSelector by remember { mutableStateOf(false) }
-
+                    // PocketPal-style: title tap karne pe bottom sheet khulta hai
+                    // jisme Pals (personas) aur Models dono tabs hain
                     Row(
                         modifier = Modifier
-                            .clickable { showPersonaSelector = true }
+                            .clickable { showBottomSheet = true }
                             .padding(vertical = 4.dp, horizontal = dimens.spacingSmall),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
@@ -332,7 +341,7 @@ fun ChatScreen(
 
                         Spacer(modifier = Modifier.width(dimens.spacingSmall))
 
-                        Column(modifier = Modifier.clickable { showRenameDialog = true }) {
+                        Column {
                             Text(
                                 text = state.currentConversation?.title ?: "New Chat",
                                 style = MaterialTheme.typography.titleSmall,
@@ -340,11 +349,13 @@ fun ChatScreen(
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1
                             )
+                            // Active model name as subtitle
                             state.activeModel?.let { model ->
                                 Text(
-                                    text = "${model.name} (${model.quantization})",
+                                    text = model.name,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = NeonPrimary
+                                    color = NeonPrimary.copy(alpha = 0.8f),
+                                    maxLines = 1
                                 )
                             }
                         }
@@ -352,50 +363,9 @@ fun ChatScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
                             contentDescription = null,
-                            tint = NeonTextSecondary,
-                            modifier = Modifier.size(dimens.iconSizeSmall)
+                            tint = NeonPrimary,
+                            modifier = Modifier.size(18.dp)
                         )
-
-                        DropdownMenu(
-                            expanded = showPersonaSelector,
-                            onDismissRequest = { showPersonaSelector = false },
-                            modifier = Modifier.background(NeonSurface)
-                        ) {
-                            state.availablePersonas.forEach { p: Persona ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(p.icon, modifier = Modifier.padding(end = dimens.spacingSmall))
-                                            Text(p.name, color = Color.White)
-                                        }
-                                    },
-                                    onClick = {
-                                        viewModel.selectPersona(p)
-                                        showPersonaSelector = false
-                                    }
-                                )
-                            }
-
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.Settings,
-                                            contentDescription = null,
-                                            tint = NeonPrimary,
-                                            modifier = Modifier
-                                                .size(dimens.iconSizeSmall)
-                                                .padding(end = dimens.spacingSmall)
-                                        )
-                                        Text("Manage Pals", color = NeonPrimary)
-                                    }
-                                },
-                                onClick = {
-                                    showPersonaSelector = false
-                                    onNavigateToPersonas()
-                                }
-                            )
-                        }
                     }
                 },
                 actions = {
@@ -444,11 +414,39 @@ fun ChatScreen(
                             tint = NeonTextSecondary
                         )
                     }
+
+
+
                     IconButton(onClick = { viewModel.createNewConversation() }) {
                         Icon(
                             imageVector = Icons.Outlined.AddCircleOutline,
                             contentDescription = "New Chat",
                             tint = NeonPrimary
+                        )
+                    }
+
+                    var showExportDialog by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showExportDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Export Chat",
+                            tint = NeonTextSecondary
+                        )
+                    }
+
+                    if (showExportDialog) {
+                        ExportFormatDialog(
+                            onDismiss = { showExportDialog = false },
+                            onFormatSelected = { format ->
+                                showExportDialog = false
+                                val exportText = if (format == "json") viewModel.exportChatAsJson() else viewModel.exportChatAsText(context)
+                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(android.content.Intent.EXTRA_TEXT, exportText)
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Chat Export")
+                                }
+                                context.startActivity(android.content.Intent.createChooser(shareIntent, "Export Chat"))
+                            }
                         )
                     }
                 },
@@ -509,15 +507,136 @@ fun ChatScreen(
                 val displayMessages = if (searchQuery.isBlank()) state.messages
                     else state.messages.filter { it.content.contains(searchQuery, ignoreCase = true) }
 
+                // Reset list position when search query changes
+                LaunchedEffect(searchQuery) {
+                    if (listState.firstVisibleItemIndex != 0) {
+                        listState.scrollToItem(0)
+                    }
+                }
+
+                // Error banner
+                if (state.error != null) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = dimens.paddingScreenHorizontal, vertical = 4.dp),
+                            color = NeonError.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonError.copy(alpha = 0.4f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.Warning, null, tint = NeonError, modifier = Modifier.size(14.dp))
+                                Text(
+                                    text = state.error!!,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = NeonError,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 2
+                                )
+                                IconButton(onClick = { viewModel.clearError() }, modifier = Modifier.size(18.dp)) {
+                                    Icon(Icons.Default.Close, null, tint = NeonError, modifier = Modifier.size(14.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Performance warning banner — 3 seconds mein auto-dismiss hota hai
+                var showPerfWarning by remember { mutableStateOf(true) }
+                LaunchedEffect(state.performanceWarning) {
+                    showPerfWarning = true
+                    if (state.performanceWarning != null) {
+                        kotlinx.coroutines.delay(3000)
+                        showPerfWarning = false
+                    }
+                }
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = state.performanceWarning != null && showPerfWarning,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = dimens.paddingScreenHorizontal, vertical = 2.dp),
+                        color = NeonPrimary.copy(alpha = 0.08f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonPrimary.copy(alpha = 0.25f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, null, tint = NeonPrimary, modifier = Modifier.size(12.dp))
+                            Text(
+                                text = state.performanceWarning ?: "",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NeonPrimary.copy(alpha = 0.8f),
+                                maxLines = 2,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = { showPerfWarning = false },
+                                modifier = Modifier.size(18.dp)
+                            ) {
+                                Icon(Icons.Default.Close, null, tint = NeonPrimary.copy(alpha = 0.6f), modifier = Modifier.size(12.dp))
+                            }
+                        }
+                    }
+                }
+
+                // Loading indicator when model loading and no messages
+                if (displayMessages.isEmpty() && state.isLoadingModel) {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = NeonPrimary, modifier = Modifier.size(32.dp))
+                            Spacer(Modifier.height(12.dp))
+                            Text("Loading model...", color = NeonTextSecondary, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                } else if (displayMessages.isEmpty() && !state.isGenerating && !state.isLoadingModel) {
+                    EmptyChatWelcome(
+                        modifier = Modifier.weight(1f),
+                        personaName = state.selectedPersona?.name ?: "Assistant",
+                        personaIcon = state.selectedPersona?.icon ?: "🤖",
+                        onSuggestionClick = { suggestion ->
+                            inputText = suggestion
+                        }
+                    )
+                } else {
                 ChatMessageList(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = { focusManager.clearFocus() })
+                        },
                     listState = listState,
                     messages = displayMessages,
                     isGenerating = state.isGenerating,
-                    streamingResponse = state.streamingResponse,
+                    // STREAMING FIX: alag StateFlow se liya — sirf streaming bubble recompose hoga
+                    streamingResponse = streamingText,
+                    streamingReasoning = streamingReasoningText,
                     isAnalyzingDocument = state.isAnalyzingDocument,
                     isAnalyzingMedia = state.isAnalyzingMedia,
                     currentlySpeakingMessageId = currentlySpeakingMessageId,
+                    availableModels = state.downloadedModels,
+                    streamingModelLabel = state.selectedPersona?.name ?: state.activeModel?.name ?: "AI",
+                    onRegenerateWithModel = { msgId, model ->
+                        viewModel.regenerateWithModel(msgId, model, context)
+                    },
                     onSpeakClick = { message ->
                         if (currentlySpeakingMessageId == message.id) {
                             tts?.stop()
@@ -528,7 +647,11 @@ fun ChatScreen(
                         }
                     },
                     onRegenerate = { viewModel.regenerateResponse(it, context) },
-                    onEdit = { inputText = it },
+                    onEdit = { messageId ->
+                        // PocketPal-style edit: message ID se content lo, pending edit set karo
+                        val content = viewModel.startEditMessage(messageId)
+                        if (content != null) inputText = content
+                    },
                     onDelete = { viewModel.deleteMessage(it) },
                     onShare = { message ->
                         val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
@@ -544,8 +667,9 @@ fun ChatScreen(
                         clipboardManager.setPrimaryClip(clipData)
                         android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
                     },
-                    showScrollToBottom = showScrollToBottom
                 )
+                } // end else (messages not empty)
+                // showScrollToBottom is now computed inside ChatMessageList
 
                 // ── Attachment chips row ──────────────────────────────────────
                 if (state.attachments.isNotEmpty()) {
@@ -564,50 +688,140 @@ fun ChatScreen(
                     }
                 }
 
-                // ── Error banner ─────────────────────────────────────────────
-                state.error?.let { err ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        color = NeonError.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
+
+
+                // Performance metrics pill — shows tps after generation completes
+                val lastPerf = state.lastPerfMetrics
+                val streamTelemetry = state.streamingTelemetry
+                val showPerfPill = !state.isGenerating && (lastPerf != null || streamTelemetry != null)
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = showPerfPill,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    val tps = streamTelemetry?.tokensPerSecond?.toDouble() ?: lastPerf?.tokensPerSecond
+                    val ttft = streamTelemetry?.ttftMs ?: 0L
+                    if (tps != null && tps > 0.0) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.End
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = NeonError,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = err,
-                                color = NeonError,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(
-                                onClick = { viewModel.clearError() },
-                                modifier = Modifier.size(24.dp)
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = NeonElevated.copy(alpha = 0.85f)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Dismiss",
-                                    tint = NeonError,
-                                    modifier = Modifier.size(14.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Tune,
+                                        null,
+                                        tint = NeonPrimary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        buildString {
+                                            append(String.format("%.1f t/s", tps))
+                                            if (ttft > 0) append(" · TTFT ${ttft}ms")
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = NeonTextSecondary
+                                    )
+                                }
                             }
                         }
+                    }
+                }
+
+                // Prompt Library quick-access button
+                var showPromptLibrary by remember { mutableStateOf(false) }
+                if (state.promptTemplates.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = { showPromptLibrary = true },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                null,
+                                tint = NeonPrimary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text("Prompts", style = MaterialTheme.typography.labelSmall, color = NeonPrimary)
+                        }
+                    }
+                }
+
+                if (showPromptLibrary) {
+                    PromptLibraryBottomSheet(
+                        prompts = state.promptTemplates,
+                        onDismiss = { showPromptLibrary = false },
+                        onSelect = { template ->
+                            inputText = template.content
+                            showPromptLibrary = false
+                        },
+                        onManage = {
+                            showPromptLibrary = false
+                            onNavigateToPromptTemplates()
+                        }
+                    )
+                }
+
+                // Context window usage indicator
+                // Real context size use karo — avgTokensPerMsg ~200 assume (realistic for chat)
+                val msgCount = state.messages.size
+                val contextTokens = state.activeModel?.contextLength?.takeIf { it > 0 } ?: 4096
+                val avgTokensPerMsg = 200
+                val maxMsgs = (contextTokens * 0.5f / avgTokensPerMsg).toInt().coerceAtLeast(10)
+                if (msgCount > 5 && state.activeModel != null) {
+                    val fillFraction = (msgCount.toFloat() / maxMsgs).coerceIn(0f, 1f)
+                    val fillColor = when {
+                        fillFraction > 0.85f -> NeonError
+                        fillFraction > 0.65f -> NeonPrimary
+                        else -> NeonTextExtraMuted
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { fillFraction },
+                            modifier = Modifier.weight(1f).height(2.dp),
+                            color = fillColor,
+                            trackColor = NeonTextExtraMuted.copy(alpha = 0.15f)
+                        )
+                        Text(
+                            text = "ctx",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = NeonTextExtraMuted.copy(alpha = 0.5f)
+                        )
                     }
                 }
 
                 ChatInputBar(
                     inputText = inputText,
                     onInputTextChanged = { inputText = it },
+                    isEditMode = state.pendingEditMessageId != null,
+                    editingPreview = state.pendingEditMessageId?.let { id ->
+                        state.messages.find { it.id == id }?.content
+                    },
+                    onCancelEdit = {
+                        viewModel.cancelEdit()
+                        inputText = ""
+                    },
                     isListening = isListening,
                     onMicClick = {
                         if (isListening) {
@@ -630,7 +844,6 @@ fun ChatScreen(
                     onAttachClick = {
                         attachFileLauncher.launch(arrayOf("image/*", "application/pdf", "text/plain"))
                     },
-                    onSettingsClick = { showBottomSheet = true },
                     onSendClick = {
                         val canSend = inputText.isNotBlank() || state.attachments.isNotEmpty()
                         if (canSend && !state.isGenerating) {
@@ -642,7 +855,9 @@ fun ChatScreen(
                     },
                     isGenerating = state.isGenerating,
                     isLoadingModel = state.isLoadingModel,
-                    canSend = inputText.isNotBlank() || state.attachments.isNotEmpty()
+                    canSend = inputText.isNotBlank() || state.attachments.isNotEmpty(),
+                    activeModel = state.activeModel,
+                    onModelClick = { showBottomSheet = true }
                 )
             }
         }
@@ -655,7 +870,10 @@ fun ChatScreen(
             onSelectModel = { viewModel.switchModel(it.id) },
             onSelectPersona = { viewModel.selectPersona(it) },
             onNavigateToModels = onNavigateToModels,
-            onNavigateToPersonas = onNavigateToPersonas,
+            onNavigateToPersonas = {
+                showBottomSheet = false
+                onNavigateToPersonaManagement()
+            },
             sheetState = sheetState
         )
     }
@@ -892,11 +1110,26 @@ fun ModelPersonaBottomSheet(
     onSelectModel: (com.localmind.app.domain.model.Model) -> Unit,
     onSelectPersona: (com.localmind.app.domain.model.Persona) -> Unit,
     onNavigateToModels: () -> Unit,
-    onNavigateToPersonas: () -> Unit,
+    onNavigateToPersonas: () -> Unit = {},
     sheetState: androidx.compose.material3.SheetState
 ) {
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 2 })
+    val sheetContext = LocalContext.current
+    var lastSelectedPersona by remember { mutableStateOf(state.selectedPersona) }
+
+    // Persona switch toast
+    LaunchedEffect(state.selectedPersona) {
+        val newPersona = state.selectedPersona
+        if (newPersona != null && newPersona.id != lastSelectedPersona?.id) {
+            android.widget.Toast.makeText(
+                sheetContext,
+                "Switched to ${newPersona.name} 😄",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+        lastSelectedPersona = newPersona
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -956,11 +1189,16 @@ fun ModelPersonaBottomSheet(
                     0 -> PersonaPage(
                         personas = state.availablePersonas,
                         selectedPersona = state.selectedPersona,
-                        onSelect = {
-                            onSelectPersona(it)
+                        onSelect = { persona ->
+                            onSelectPersona(persona)
                             coroutineScope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
                         },
-                        onManage = onNavigateToPersonas
+                        onManage = {
+                            coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
+                                onDismiss()
+                                onNavigateToPersonas()
+                            }
+                        }
                     )
                     1 -> ModelPage(
                         models = state.downloadedModels,
@@ -988,7 +1226,7 @@ fun PersonaPage(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(personas, key = { it.id }) { p ->
@@ -999,14 +1237,13 @@ fun PersonaPage(
                 )
             }
         }
-
         TextButton(
             onClick = onManage,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
-            Icon(Icons.Default.Settings, null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Manage Your Pals", color = NeonPrimary)
+            Icon(Icons.Default.Settings, null, modifier = Modifier.size(14.dp), tint = NeonPrimary)
+            Spacer(Modifier.width(6.dp))
+            Text("Manage Pals", color = NeonPrimary, style = MaterialTheme.typography.labelMedium)
         }
     }
 }
@@ -1133,6 +1370,314 @@ fun ModelSwitcherCard(
                 if (model.supportsDocument) {
                     Icon(Icons.Default.HistoryEdu, null, tint = NeonPrimary.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
                 }
+            }
+        }
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PromptLibraryBottomSheet(
+    prompts: List<com.localmind.app.data.local.entity.PromptTemplateEntity>,
+    onDismiss: () -> Unit,
+    onSelect: (com.localmind.app.data.local.entity.PromptTemplateEntity) -> Unit,
+    onManage: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = NeonSurface,
+        scrimColor = Color.Black.copy(alpha = 0.6f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Prompt Library",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = NeonPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(onClick = onManage) {
+                    Text("Manage", color = NeonPrimary)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (prompts.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            null,
+                            modifier = Modifier.size(48.dp),
+                            tint = NeonTextExtraMuted
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "No prompt templates yet",
+                            color = NeonTextExtraMuted,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(prompts) { prompt ->
+                        Surface(
+                            onClick = { onSelect(prompt) },
+                            color = NeonElevated,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    prompt.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    prompt.content,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = NeonTextSecondary,
+                                    maxLines = 2
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun EmptyChatWelcome(
+    modifier: Modifier = Modifier,
+    personaName: String,
+    personaIcon: String,
+    onSuggestionClick: (String) -> Unit
+) {
+    val suggestions = listOf(
+        "Explain quantum computing simply",
+        "Write a Python script to sort a list",
+        "What are the best productivity tips?",
+        "Help me debug my code"
+    )
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 32.dp)
+        ) {
+            // Persona icon: custom persona ke liye emoji, default ke liye animated brain
+            if (personaIcon != "🤖" && personaIcon.isNotBlank()) {
+                Text(
+                    text = personaIcon,
+                    fontSize = 72.sp
+                )
+            } else {
+                BrainLogoIcon(size = 96.dp)
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "Hi, I'm $personaName",
+                style = MaterialTheme.typography.headlineSmall,
+                color = NeonText,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Private · On-Device · Always Ready",
+                style = MaterialTheme.typography.bodySmall,
+                color = NeonPrimary.copy(alpha = 0.7f),
+                letterSpacing = 1.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(32.dp))
+            suggestions.forEach { suggestion ->
+                Surface(
+                    onClick = { onSuggestionClick(suggestion) },
+                    color = NeonElevated,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = suggestion,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = NeonTextSecondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ExportFormatDialog(
+    onDismiss: () -> Unit,
+    onFormatSelected: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Export Chat", color = Color.White) },
+        text = { Text("Choose export format:", color = NeonTextSecondary) },
+        containerColor = NeonSurface,
+        confirmButton = {
+            Column(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = { onFormatSelected("markdown") },
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonPrimary),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Markdown (.md)", color = Color.Black)
+                }
+                Button(
+                    onClick = { onFormatSelected("json") },
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonElevated),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("JSON (.json)", color = Color.White)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = NeonPrimary)
+            }
+        }
+    )
+}
+
+// ===== Animated Brain Logo Icon for Empty Chat Screen =====
+@Composable
+fun BrainLogoIcon(size: Dp = 88.dp) {
+    val inf = rememberInfiniteTransition(label = "brain")
+    val ringRot by inf.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(8000, easing = androidx.compose.animation.core.LinearEasing), RepeatMode.Restart),
+        label = "ringRot"
+    )
+    val glow by inf.animateFloat(
+        initialValue = 0.5f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1800, easing = androidx.compose.animation.core.FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "glow"
+    )
+    val nodeBlink by inf.animateFloat(
+        initialValue = 0.4f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "node"
+    )
+    val primary = NeonPrimary
+    val primaryVar = NeonPrimaryVariant
+
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(size)) {
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier.size(size).graphicsLayer { rotationZ = ringRot }
+        ) {
+            val r = this.size.minDimension / 2f - 3.dp.toPx()
+            val cx = this.size.width / 2f
+            val cy = this.size.height / 2f
+            val circumference = 2f * Math.PI.toFloat() * r
+            val dashLen = 14f
+            val gapLen = 8f
+            val count = (circumference / (dashLen + gapLen)).toInt()
+            repeat(count) { i ->
+                val startAngle = i * (360f / count)
+                drawArc(
+                    color = primary.copy(alpha = glow * 0.6f),
+                    startAngle = startAngle,
+                    sweepAngle = dashLen / circumference * 360f,
+                    useCenter = false,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = 1.5.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    ),
+                    topLeft = androidx.compose.ui.geometry.Offset(cx - r, cy - r),
+                    size = androidx.compose.ui.geometry.Size(r * 2, r * 2)
+                )
+            }
+        }
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(size * 0.72f)) {
+            val w = this.size.width
+            val h = this.size.height
+            val cx = w / 2f
+            val cy = h / 2f
+            val br = w * 0.42f
+            drawCircle(
+                color = primary.copy(alpha = glow * 0.12f),
+                radius = br * 1.15f,
+                center = androidx.compose.ui.geometry.Offset(cx, cy)
+            )
+            drawOval(
+                color = primaryVar.copy(alpha = 0.85f),
+                topLeft = androidx.compose.ui.geometry.Offset(cx - br, cy - br * 0.85f),
+                size = androidx.compose.ui.geometry.Size(br * 1.05f, br * 1.7f)
+            )
+            drawOval(
+                color = primary.copy(alpha = 0.75f),
+                topLeft = androidx.compose.ui.geometry.Offset(cx - 0.05f * br, cy - br * 0.85f),
+                size = androidx.compose.ui.geometry.Size(br * 1.05f, br * 1.7f)
+            )
+            drawLine(
+                color = primary.copy(alpha = 0.4f),
+                start = androidx.compose.ui.geometry.Offset(cx, cy - br * 0.7f),
+                end = androidx.compose.ui.geometry.Offset(cx, cy + br * 0.7f),
+                strokeWidth = 1.5.dp.toPx()
+            )
+            val nodes = listOf(
+                androidx.compose.ui.geometry.Offset(cx - br * 0.55f, cy - br * 0.35f),
+                androidx.compose.ui.geometry.Offset(cx - br * 0.2f, cy - br * 0.6f),
+                androidx.compose.ui.geometry.Offset(cx + br * 0.2f, cy - br * 0.5f),
+                androidx.compose.ui.geometry.Offset(cx + br * 0.5f, cy - br * 0.2f),
+                androidx.compose.ui.geometry.Offset(cx + br * 0.4f, cy + br * 0.3f),
+                androidx.compose.ui.geometry.Offset(cx - br * 0.1f, cy + br * 0.5f),
+                androidx.compose.ui.geometry.Offset(cx - br * 0.5f, cy + br * 0.25f),
+                androidx.compose.ui.geometry.Offset(cx, cy)
+            )
+            listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 0, 1 to 7, 3 to 7, 5 to 7).forEach { (a, b) ->
+                drawLine(
+                    color = primary.copy(alpha = 0.45f * glow),
+                    start = nodes[a], end = nodes[b],
+                    strokeWidth = 1.dp.toPx()
+                )
+            }
+            nodes.forEachIndexed { i, pos ->
+                val alpha = if (i % 2 == 0) nodeBlink else (1f - nodeBlink + 0.4f)
+                drawCircle(color = primary.copy(alpha = alpha), radius = if (i == 7) 4.dp.toPx() else 2.5.dp.toPx(), center = pos)
+                drawCircle(color = Color.White.copy(alpha = alpha * 0.6f), radius = 1.dp.toPx(), center = pos)
             }
         }
     }

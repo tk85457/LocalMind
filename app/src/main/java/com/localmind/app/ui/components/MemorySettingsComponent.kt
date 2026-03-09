@@ -64,15 +64,20 @@ fun MemorySettingsSection(
                     if (!input.all { c -> c.isDigit() }) return@OutlinedTextField
                     contextSizeInput = input
 
+                    // Minimum 512 ho tabhi save karo — incomplete/tiny values avoid karo
                     val size = input.toIntOrNull() ?: return@OutlinedTextField
+                    if (size < 512) return@OutlinedTextField
                     onContextSizeChange(size)
 
+                    val recommended = com.localmind.app.core.Constants.MAX_CONTEXT_SIZE
                     val totalRam = hardwareStats?.totalRamGb ?: 4.0
                     val warningText = when {
                         totalRam <= 4.1 && size > 2048 ->
-                            "Your device has limited RAM (${String.format("%.1f", totalRam)} GB). A context size of $size may cause memory-related crashes."
-                        totalRam <= 6.1 && size > 4096 ->
-                            "High context size ($size) on ${String.format("%.1f", totalRam)} GB RAM might impact generation speed."
+                            "Limited RAM (${String.format("%.1f", totalRam)} GB). Context $size may cause crashes. Recommended max: $recommended."
+                        totalRam <= 6.1 && size > 3072 ->
+                            "High context ($size) may slow generation on ${String.format("%.1f", totalRam)} GB RAM. Recommended max: $recommended."
+                        size > recommended ->
+                            "Context $size exceeds recommended max ($recommended). Stability not guaranteed."
                         else -> null
                     }
                     if (warningText != null) {
@@ -103,7 +108,7 @@ fun MemorySettingsSection(
                 })
             )
             Text(
-                stringResource(R.string.settings_requires_reload),
+                "${stringResource(R.string.settings_requires_reload)} • Max: ${com.localmind.app.core.Constants.MAX_CONTEXT_SIZE} tokens",
                 style = MaterialTheme.typography.bodySmall,
                 color = NeonTextSecondary,
                 modifier = Modifier.padding(top = 4.dp)

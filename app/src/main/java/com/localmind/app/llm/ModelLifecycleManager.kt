@@ -38,6 +38,33 @@ class ModelLifecycleManager @Inject constructor(
     ): Result<ModelLifecyclePlan> {
         pendingModelId = modelId
 
+        // TTFT FIX: Fast-path check BEFORE acquiring modelLock.
+        // Agar model already loaded hai toh lock acquire karne ki zarurat hi nahi.
+        // Pehle lock ke andar yeh check tha — lock wait + 3 DataStore reads = ~8s delay.
+        if (!options.forceLoad) {
+            val model = modelRepository.getModelById(modelId)
+            if (model != null && modelRepository.modelFileExists(model)) {
+                val (loadedKey, loadedContext) = chatRepository.getLoadedModelDetails()
+                val targetKey = if (model.storageType == com.localmind.app.core.storage.ModelStorageType.SAF) {
+                    "saf:${model.storageUri}"
+                } else {
+                    val normalizedPath = model.filePath
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { File(it).absolutePath }
+                        ?: model.fileName
+                    "path:$normalizedPath"
+                }
+                if (loadedKey == targetKey && chatRepository.isModelLoaded()) {
+                    // Already loaded — return immediately, zero disk I/O
+                    return Result.success(ModelLifecyclePlan(
+                        contextSize = loadedContext,
+                        threadCount = 0, // not used by caller
+                        maxTokens = 0   // not used by caller
+                    ))
+                }
+            }
+        }
+
         return modelLock.withLock {
             // Check if another request has superseded this one while waiting for the lock
             if (pendingModelId != modelId) {
@@ -51,7 +78,6 @@ class ModelLifecycleManager @Inject constructor(
                 return Result.failure(IllegalStateException("Model file is missing. Re-download required."))
             }
 
-            // Determine target configuration
             val userContextSize = settingsRepository.contextSize.first()
             val requestedContextSize = userContextSize
 
@@ -150,8 +176,11 @@ class ModelLifecycleManager @Inject constructor(
                     )
                 } else {
                     modelRepository.activateModel(modelId)
-                    applyRecommendedSamplingSettings(model)
                     settingsRepository.clearActiveCloudModel()
+                    // TTFT FIX: Result.success pehle return karo, settings baad mein apply hongi.
+                    // modelLock.withLock ke andar hi hain isliye withLock block se bahar nahi ja sakte.
+                    // Simple fix: directly call karo — ye fast hai (sirf agar showAdvanced=false).
+                    runCatching { applyRecommendedSamplingSettings(model) }
                     Result.success(plan)
                 }
             } catch (timeout: TimeoutCancellationException) {

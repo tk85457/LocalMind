@@ -641,9 +641,10 @@ class HuggingFaceViewModel @Inject constructor(
     }
 
     fun downloadModelVariant(modelInfo: ModelCatalogItem, variantFileName: String) {
+        val uniqueId = "${modelInfo.repoId}|$variantFileName"
         if (
-            _uiState.value.downloadingModels.containsKey(modelInfo.id) ||
-            _uiState.value.pendingDownloadModelIds.contains(modelInfo.id)
+            _uiState.value.downloadingModels.containsKey(uniqueId) ||
+            _uiState.value.pendingDownloadModelIds.contains(uniqueId)
         ) return
 
         if (!NetworkUtils.isOnline(context)) {
@@ -652,7 +653,9 @@ class HuggingFaceViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val effectiveModel = applySelectedVariant(modelInfo, variantFileName)
+            val effectiveModel = applySelectedVariant(modelInfo, variantFileName).copy(
+                id = uniqueId
+            )
 
             if (_uiState.value.downloadedModelIds.contains(effectiveModel.id)) {
                 _uiState.update { it.copy(successMessage = "Model already downloaded. Activating...") }
@@ -734,6 +737,12 @@ class HuggingFaceViewModel @Inject constructor(
                 successMessage = "Model activated!",
                 failureMessage = "Could not start model on this phone."
             )
+        }
+    }
+
+    fun offloadModel() {
+        viewModelScope.launch {
+            modelLifecycleManager.unloadModelSafely()
         }
     }
 

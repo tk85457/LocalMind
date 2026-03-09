@@ -21,9 +21,10 @@ object Routes {
     const val ONLINE_MODEL_DETAIL = "online_model_detail/{repoId}"
     const val IMPORT_MODEL = "import_model"
     const val SETTINGS = "settings"
-    const val PERSONA_HUB = "persona_hub"
     const val BENCHMARK_HOME = "benchmark"
     const val BENCHMARK = "benchmark/{modelId}"
+    const val PERSONA_MANAGEMENT = "persona_management"
+    const val PROMPT_TEMPLATE_MANAGER = "prompt_template_manager"
 
     fun modelDetail(modelId: String): String = "model_detail/${Uri.encode(modelId)}"
     fun onlineModelDetail(repoId: String): String = "online_model_detail/${Uri.encode(repoId)}"
@@ -64,6 +65,27 @@ fun NavGraph(
             )
         }
 
+        // Routes.CHAT alias — drawer se navigate karne pe crash fix
+        composable(Routes.CHAT) {
+            ChatScreen(
+                conversationId = null,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToModels = {
+                    navController.navigate(Routes.MODEL_MANAGER) { launchSingleTop = true }
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
+                },
+                onNavigateToPersonaManagement = {
+                    navController.navigate(Routes.PERSONA_MANAGEMENT)
+                },
+                onNavigateToPromptTemplates = {
+                    navController.navigate(Routes.PROMPT_TEMPLATE_MANAGER)
+                },
+                onOpenDrawer = onOpenDrawer
+            )
+        }
+
         // Chat Screen (single destination, optional conversationId query argument)
         composable(
             route = Routes.CHAT_WITH_ID,
@@ -97,14 +119,11 @@ fun NavGraph(
                         Log.w("LocalMind-Nav", "Settings navigation failed from chat", it)
                     }
                 },
-                onNavigateToPersonas = {
-                    runCatching {
-                        navController.navigate(Routes.PERSONA_HUB) {
-                            launchSingleTop = true
-                        }
-                    }.onFailure {
-                        Log.w("LocalMind-Nav", "Persona navigation failed from chat", it)
-                    }
+                onNavigateToPersonaManagement = {
+                    navController.navigate(Routes.PERSONA_MANAGEMENT)
+                },
+                onNavigateToPromptTemplates = {
+                    navController.navigate(Routes.PROMPT_TEMPLATE_MANAGER)
                 },
                 onOpenDrawer = onOpenDrawer
             )
@@ -145,11 +164,6 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onOnlineModelDetail = { repoId ->
                     navController.navigate(Routes.onlineModelDetail(repoId))
-                },
-                onNavigateToChat = {
-                    navController.navigate(Routes.CHAT) {
-                        popUpTo(Routes.MODEL_HUB) { inclusive = true }
-                    }
                 }
             )
         }
@@ -196,20 +210,29 @@ fun NavGraph(
         // Settings
         composable(Routes.SETTINGS) {
             SettingsScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // Persona Hub
-        composable(Routes.PERSONA_HUB) {
-            PersonaHubScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPersonas = { navController.navigate(Routes.PERSONA_MANAGEMENT) },
+                onNavigateToPromptTemplates = { navController.navigate(Routes.PROMPT_TEMPLATE_MANAGER) }
             )
         }
 
         // Benchmark Home
         composable(Routes.BENCHMARK_HOME) {
             BenchmarkScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // Persona Management
+        composable(Routes.PERSONA_MANAGEMENT) {
+            PersonaManagementScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // Prompt Template Manager
+        composable(Routes.PROMPT_TEMPLATE_MANAGER) {
+            PromptTemplateManagerScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -225,5 +248,6 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
+
     }
 }

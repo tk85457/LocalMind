@@ -40,8 +40,9 @@ class ModelCatalogRepository @Inject constructor(
 
         val curated = huggingFaceRepository.searchModels(query)
             .map { curatedToCatalog(it, profile.totalRamGb) }
+        val sorted = sortCatalogItems(curated, sort, direction)
 
-        markDownloaded(curated)
+        markDownloaded(sorted)
     }
 
     suspend fun loadLiveCatalogPage(
@@ -140,6 +141,19 @@ class ModelCatalogRepository @Inject constructor(
             val body = response.body() ?: emptyList()
             body.mapNotNull { it -> liveToCatalog(it, totalRamGb) }
         }.getOrElse { throw it }
+    }
+
+    private fun sortCatalogItems(
+        items: List<ModelCatalogItem>,
+        sort: String,
+        direction: Int
+    ): List<ModelCatalogItem> {
+        val sorted = when (sort.lowercase(Locale.ROOT)) {
+            "likes" -> items.sortedBy { it.likes }
+            "lastmodified" -> items.sortedBy { it.lastModified ?: "" }
+            else -> items.sortedBy { it.downloads }
+        }
+        return if (direction < 0) sorted.asReversed() else sorted
     }
 
     private fun curatedToCatalog(info: HuggingFaceModelInfo, totalRamGb: Int): ModelCatalogItem {
@@ -246,7 +260,7 @@ class ModelCatalogRepository @Inject constructor(
         val templateSpec = TemplateCatalog.get(templateId)
         val tags = response.tags ?: emptyList()
         return ModelCatalogItem(
-            id = repoId,
+            id = "$repoId|${selectedFile.filename}",
             name = repoId.substringAfterLast('/'),
             repoId = repoId,
             author = response.author ?: repoId.substringBefore('/'),
@@ -316,6 +330,12 @@ class ModelCatalogRepository @Inject constructor(
             .orEmpty()
             .asSequence()
             .filter { it.filename.endsWith(".gguf", ignoreCase = true) }
+            .filterNot { sibling ->
+                val normalized = sibling.filename.lowercase(Locale.US)
+                normalized.startsWith("mmproj-") ||
+                    normalized.contains("/mmproj-") ||
+                    normalized.contains("mmproj")
+            }
             .take((safeMaxVariants * 32).coerceAtMost(1024))
             .toList()
 
@@ -633,4 +653,3 @@ class ModelCatalogRepository @Inject constructor(
         )
     }
 }
-

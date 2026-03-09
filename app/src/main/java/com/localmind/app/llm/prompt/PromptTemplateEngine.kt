@@ -20,7 +20,8 @@ class PromptTemplateEngine @Inject constructor() {
         when (family) {
             TemplateFamily.LLAMA3 -> {
                 if (bosEnabled) builder.append("<|begin_of_text|>")
-                appendLlama3Message(builder, "system", systemPrompt)
+                // PERF: blank system prompt = skip system block = fewer tokens = faster TTFT
+                if (systemPrompt.isNotBlank()) appendLlama3Message(builder, "system", systemPrompt)
                 history.forEach { msg ->
                     appendLlama3Message(builder, msg.role.toTemplateRole(), msg.content)
                 }
@@ -31,7 +32,7 @@ class PromptTemplateEngine @Inject constructor() {
             }
 
             TemplateFamily.PHI3 -> {
-                appendPhi3Message(builder, "system", systemPrompt)
+                if (systemPrompt.isNotBlank()) appendPhi3Message(builder, "system", systemPrompt)
                 history.forEach { msg ->
                     appendPhi3Message(builder, msg.role.toTemplateRole(), msg.content)
                 }
@@ -40,8 +41,10 @@ class PromptTemplateEngine @Inject constructor() {
             }
 
             TemplateFamily.QWEN,
-            TemplateFamily.CHATML -> {
-                appendChatMlMessage(builder, "system", systemPrompt)
+            TemplateFamily.CHATML,
+            TemplateFamily.DEEPSEEK,
+            TemplateFamily.QWQ -> {
+                if (systemPrompt.isNotBlank()) appendChatMlMessage(builder, "system", systemPrompt)
                 history.forEach { msg ->
                     appendChatMlMessage(builder, msg.role.toTemplateRole(), msg.content)
                 }
@@ -104,4 +107,3 @@ class PromptTemplateEngine @Inject constructor() {
         return if (this == MessageRole.USER) "user" else "assistant"
     }
 }
-

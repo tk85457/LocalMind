@@ -9,7 +9,7 @@ import com.localmind.app.data.repository.SettingsRepository
 import com.localmind.app.domain.model.CompatibilityMode
 import com.localmind.app.domain.model.InferenceMode
 import com.localmind.app.domain.model.RemoteProvider
-import com.localmind.app.domain.model.VisionMode
+
 import com.localmind.app.llm.ActivationOptions
 import com.localmind.app.llm.ActivationSource
 import com.localmind.app.llm.ModelLifecycleManager
@@ -37,7 +37,7 @@ data class SettingsState(
     val storageUsed: Long = 0L,
     val cacheSize: Long = 0L,
     val defaultTemperature: Float = 0.7f,
-    val defaultTopP: Float = 0.9f,
+    val defaultTopP: Float = SettingsRepository.DEFAULT_TOP_P,
     val defaultMaxTokens: Int = SettingsRepository.DEFAULT_MAX_TOKENS,
     val contextSize: Int = SettingsRepository.DEFAULT_CONTEXT_SIZE,
     val memoryMapping: String = "Smart",
@@ -55,7 +55,7 @@ data class SettingsState(
     val compatibilityMode: CompatibilityMode = CompatibilityMode.SAFE,
     val allowForceLoad: Boolean = true,
     val inferenceMode: InferenceMode = InferenceMode.HYBRID,
-    val visionMode: VisionMode = VisionMode.REMOTE_FALLBACK,
+
     val remoteFallbackEnabled: Boolean = true,
     val remoteProvider: RemoteProvider = RemoteProvider.HUGGING_FACE,
     val fontScale: Float = 1.0f,
@@ -66,9 +66,26 @@ data class SettingsState(
     val importExportStatus: UiState<String> = UiState.Idle,
     val batchSize: Int = SettingsRepository.DEFAULT_BATCH_SIZE,
     val physicalBatchSize: Int = SettingsRepository.DEFAULT_PHYSICAL_BATCH_SIZE,
-    val flashAttention: String = SettingsRepository.DEFAULT_FLASH_ATTENTION,
+    val flashAttention: Boolean = SettingsRepository.DEFAULT_FLASH_ATTENTION,
+    val useMlock: Boolean = SettingsRepository.DEFAULT_USE_MLOCK,
+    val useMmap: Boolean = SettingsRepository.DEFAULT_USE_MMAP,
     val keyCacheType: String = SettingsRepository.DEFAULT_KEY_CACHE_TYPE,
-    val valueCacheType: String = SettingsRepository.DEFAULT_VALUE_CACHE_TYPE
+    val valueCacheType: String = SettingsRepository.DEFAULT_VALUE_CACHE_TYPE,
+    // PocketPal Completion Params — full parity
+    val minP: Float = SettingsRepository.DEFAULT_MIN_P,
+    val seed: Int = SettingsRepository.DEFAULT_SEED,
+    val xtcThreshold: Float = SettingsRepository.DEFAULT_XTC_THRESHOLD,
+    val xtcProbability: Float = SettingsRepository.DEFAULT_XTC_PROBABILITY,
+    val typicalP: Float = SettingsRepository.DEFAULT_TYPICAL_P,
+    val penaltyLastN: Int = SettingsRepository.DEFAULT_PENALTY_LAST_N,
+    val penaltyRepeat: Float = SettingsRepository.DEFAULT_PENALTY_REPEAT,
+    val penaltyFreq: Float = SettingsRepository.DEFAULT_PENALTY_FREQ,
+    val penaltyPresent: Float = SettingsRepository.DEFAULT_PENALTY_PRESENT,
+    val mirostat: Int = SettingsRepository.DEFAULT_MIROSTAT,
+    val mirostatTau: Float = SettingsRepository.DEFAULT_MIROSTAT_TAU,
+    val mirostatEta: Float = SettingsRepository.DEFAULT_MIROSTAT_ETA,
+    val jinja: Boolean = SettingsRepository.DEFAULT_JINJA,
+    val includeThinkingInContext: Boolean = SettingsRepository.DEFAULT_INCLUDE_THINKING_IN_CONTEXT
 )
 
 @HiltViewModel
@@ -100,73 +117,116 @@ class SettingsViewModel @Inject constructor(
     private val _importExportStatus = MutableStateFlow<UiState<String>>(UiState.Idle)
     val importExportStatus = _importExportStatus.asStateFlow()
 
+    // Kotlin combine() max 16 flows — isliye 2 combine chains use karo + merge
+    private val _settingsPart1 = combine(
+        repository.temperature,       // 0
+        repository.topP,               // 1
+        repository.maxTokens,          // 2
+        repository.contextSize,        // 3
+        repository.memoryMapping,      // 4
+        repository.autoOffload,        // 5
+        repository.language,           // 6
+        repository.darkMode,           // 7
+        repository.autoNavigateChat,   // 8
+        repository.onboardingCompleted,// 9
+        repository.showAdvancedSettings, // 10
+        repository.repeatPenalty,      // 11
+        repository.threadCount,        // 12
+        repository.topK,               // 13
+        repository.permissionsRequested, // 14
+        repository.compatibilityMode   // 15
+    ) { a -> a }
+
+    private val _settingsPart2 = combine(
+        repository.allowForceLoad,     // 0
+        repository.inferenceMode,      // 1
+        repository.remoteFallbackEnabled, // 2
+        repository.remoteProvider,     // 3
+        repository.gpuLayers,          // 4
+        repository.fontScale,          // 5
+        repository.themeColor,         // 6
+        repository.fontFamily,         // 7
+        repository.biometricLock,      // 8
+        repository.autoDeleteDays,     // 9
+        repository.batchSize,          // 10
+        repository.physicalBatchSize,  // 11
+        repository.flashAttention,     // 12
+        repository.useMlock,           // 13
+        repository.useMmap,            // 14
+        repository.keyCacheType        // 15
+    ) { a -> a }
+
+    private val _settingsPart3 = combine(
+        repository.valueCacheType,     // 0
+        repository.minP,               // 1
+        repository.seed,               // 2
+        repository.xtcThreshold,       // 3
+        repository.xtcProbability,     // 4
+        repository.typicalP,           // 5
+        repository.penaltyLastN,       // 6
+        repository.penaltyRepeat,      // 7
+        repository.penaltyFreq,        // 8
+        repository.penaltyPresent,     // 9
+        repository.mirostat,           // 10
+        repository.mirostatTau,        // 11
+        repository.mirostatEta,        // 12
+        repository.jinja,              // 13
+        repository.includeThinkingInContext // 14
+    ) { a -> a }
+
     val settings: StateFlow<SettingsState> = combine(
-        repository.temperature,
-        repository.topP,
-        repository.maxTokens,
-        repository.contextSize,
-        repository.memoryMapping,
-        repository.autoOffload,
-        repository.language,
-        repository.darkMode,
-        repository.autoNavigateChat,
-        repository.onboardingCompleted,
-        repository.showAdvancedSettings,
-        repository.repeatPenalty,
-        repository.threadCount,
-        repository.topK,
-        repository.permissionsRequested,
-        repository.compatibilityMode,
-        repository.allowForceLoad,
-        repository.inferenceMode,
-        repository.visionMode,
-        repository.remoteFallbackEnabled,
-        repository.remoteProvider,
-        repository.gpuLayers,
-        repository.fontScale,
-        repository.themeColor,
-        repository.fontFamily,
-        repository.biometricLock,
-        repository.autoDeleteDays,
-        repository.batchSize,
-        repository.physicalBatchSize,
-        repository.flashAttention,
-        repository.keyCacheType,
-        repository.valueCacheType
-    ) { args ->
+        _settingsPart1,
+        _settingsPart2,
+        _settingsPart3
+    ) { p1, p2, p3 ->
         SettingsState(
-            defaultTemperature = args[0] as Float,
-            defaultTopP = args[1] as Float,
-            defaultMaxTokens = args[2] as Int,
-            contextSize = args[3] as Int,
-            memoryMapping = args[4] as String,
-            autoOffload = args[5] as Boolean,
-            language = args[6] as String,
-            darkMode = args[7] as Boolean,
-            autoNavigateChat = args[8] as Boolean,
-            onboardingCompleted = args[9] as Boolean,
-            showAdvancedSettings = args[10] as Boolean,
-            repeatPenalty = args[11] as Float,
-            threadCount = args[12] as Int,
-            topK = args[13] as Int,
-            permissionsRequested = args[14] as Boolean,
-            compatibilityMode = args[15] as CompatibilityMode,
-            allowForceLoad = args[16] as Boolean,
-            inferenceMode = args[17] as InferenceMode,
-            visionMode = args[18] as VisionMode,
-            remoteFallbackEnabled = args[19] as Boolean,
-            remoteProvider = args[20] as RemoteProvider,
-            gpuLayers = args[21] as Int,
-            fontScale = args[22] as Float,
-            themeColor = args[23] as String,
-            fontFamily = args[24] as String,
-            biometricLock = args[25] as Boolean,
-            autoDeleteDays = args[26] as Int,
-            batchSize = args[27] as Int,
-            physicalBatchSize = args[28] as Int,
-            flashAttention = args[29] as String,
-            keyCacheType = args[30] as String,
-            valueCacheType = args[31] as String
+            defaultTemperature = p1[0] as Float,
+            defaultTopP = p1[1] as Float,
+            defaultMaxTokens = p1[2] as Int,
+            contextSize = p1[3] as Int,
+            memoryMapping = p1[4] as String,
+            autoOffload = p1[5] as Boolean,
+            language = p1[6] as String,
+            darkMode = p1[7] as Boolean,
+            autoNavigateChat = p1[8] as Boolean,
+            onboardingCompleted = p1[9] as Boolean,
+            showAdvancedSettings = p1[10] as Boolean,
+            repeatPenalty = p1[11] as Float,
+            threadCount = p1[12] as Int,
+            topK = p1[13] as Int,
+            permissionsRequested = p1[14] as Boolean,
+            compatibilityMode = p1[15] as CompatibilityMode,
+            allowForceLoad = p2[0] as Boolean,
+            inferenceMode = p2[1] as InferenceMode,
+            remoteFallbackEnabled = p2[2] as Boolean,
+            remoteProvider = p2[3] as RemoteProvider,
+            gpuLayers = p2[4] as Int,
+            fontScale = p2[5] as Float,
+            themeColor = p2[6] as String,
+            fontFamily = p2[7] as String,
+            biometricLock = p2[8] as Boolean,
+            autoDeleteDays = p2[9] as Int,
+            batchSize = p2[10] as Int,
+            physicalBatchSize = p2[11] as Int,
+            flashAttention = p2[12] as Boolean,
+            useMlock = p2[13] as Boolean,
+            useMmap = p2[14] as Boolean,
+            keyCacheType = p2[15] as String,
+            valueCacheType = p3[0] as String,
+            minP = p3[1] as Float,
+            seed = p3[2] as Int,
+            xtcThreshold = p3[3] as Float,
+            xtcProbability = p3[4] as Float,
+            typicalP = p3[5] as Float,
+            penaltyLastN = p3[6] as Int,
+            penaltyRepeat = p3[7] as Float,
+            penaltyFreq = p3[8] as Float,
+            penaltyPresent = p3[9] as Float,
+            mirostat = p3[10] as Int,
+            mirostatTau = p3[11] as Float,
+            mirostatEta = p3[12] as Float,
+            jinja = p3[13] as Boolean,
+            includeThinkingInContext = p3[14] as Boolean
         )
     }.combine(_importExportStatus) { state, status ->
         state.copy(importExportStatus = status)
@@ -208,16 +268,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    private fun JSONObject.optNonBlankString(key: String): String? {
+        if (!has(key) || isNull(key)) return null
+        val value = optString(key, "").trim()
+        return value.takeIf { it.isNotEmpty() }
+    }
+
     private fun applyMaximumSpeedCaps() {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val onboarded = repository.onboardingCompleted.first()
             if (onboarded) return@launch
 
             val profile = deviceProfileManager.currentProfile()
-            val targetContext = min(
-                profile.recommendedContextSize,
-                SettingsRepository.DEFAULT_CONTEXT_SIZE
-            )
+            val targetContext = profile.recommendedContextSize
             val targetThreads = profile.recommendedThreadCount
             val targetMaxTokens = min(
                 profile.recommendedMaxTokens,
@@ -260,10 +323,7 @@ class SettingsViewModel @Inject constructor(
             val currentThreads = repository.threadCount.first()
             val currentMaxTokens = repository.maxTokens.first()
             val currentTopK = repository.topK.first()
-            val targetContextDefault = min(
-                profile.recommendedContextSize,
-                SettingsRepository.DEFAULT_CONTEXT_SIZE
-            )
+            val targetContextDefault = profile.recommendedContextSize
             val targetMaxTokensDefault = min(
                 profile.recommendedMaxTokens,
                 SettingsRepository.DEFAULT_MAX_TOKENS
@@ -450,8 +510,8 @@ class SettingsViewModel @Inject constructor(
                         createdAt = convJson.optLong("createdAt", System.currentTimeMillis()),
                         updatedAt = convJson.optLong("updatedAt", System.currentTimeMillis()),
                         messageCount = 0, // Will be calculated/updated
-                        systemPrompt = convJson.optString("systemPrompt", null).takeIf { it?.isNotEmpty() == true },
-                        summary = convJson.optString("summary", null).takeIf { it?.isNotEmpty() == true },
+                        systemPrompt = convJson.optNonBlankString("systemPrompt"),
+                        summary = convJson.optNonBlankString("summary"),
                         isHidden = convJson.optBoolean("isHidden", false)
                     )
                     conversationsToInsert.add(convEntity)
@@ -469,9 +529,9 @@ class SettingsViewModel @Inject constructor(
                             content = msgJson.getString("content"),
                             timestamp = msgJson.optLong("timestamp", System.currentTimeMillis()),
                             tokenCount = msgJson.optInt("tokenCount", 0).takeIf { it > 0 },
-                            imageUri = msgJson.optString("imageUri", null).takeIf { it?.isNotEmpty() == true },
-                            reasoningContent = msgJson.optString("reasoningContent", null).takeIf { it?.isNotEmpty() == true },
-                            inferenceSource = msgJson.optString("inferenceSource", null).takeIf { it?.isNotEmpty() == true },
+                            imageUri = msgJson.optNonBlankString("imageUri"),
+                            reasoningContent = msgJson.optNonBlankString("reasoningContent"),
+                            inferenceSource = msgJson.optNonBlankString("inferenceSource"),
                             ttftMs = msgJson.optLong("ttftMs", 0).takeIf { it > 0 },
                             generationMs = msgJson.optLong("generationMs", 0).takeIf { it > 0 },
                             tokensPerSecond = msgJson.optDouble("tokensPerSecond", 0.0).toFloat().takeIf { it > 0 }
@@ -586,9 +646,7 @@ class SettingsViewModel @Inject constructor(
         repository.setInferenceMode(mode)
     }
 
-    fun setVisionMode(mode: VisionMode) = viewModelScope.launch {
-        repository.setVisionMode(mode)
-    }
+
 
     fun setRemoteFallbackEnabled(enabled: Boolean) = viewModelScope.launch {
         repository.setRemoteFallbackEnabled(enabled)
@@ -628,8 +686,18 @@ class SettingsViewModel @Inject constructor(
         markRuntimeSettingsDirty()
     }
 
-    fun updateFlashAttention(mode: String) = viewModelScope.launch {
+    fun updateFlashAttention(mode: Boolean) = viewModelScope.launch {
         repository.updateFlashAttention(mode)
+        markRuntimeSettingsDirty()
+    }
+
+    fun updateUseMlock(enabled: Boolean) = viewModelScope.launch {
+        repository.updateUseMlock(enabled)
+        markRuntimeSettingsDirty()
+    }
+
+    fun updateUseMmap(enabled: Boolean) = viewModelScope.launch {
+        repository.updateUseMmap(enabled)
         markRuntimeSettingsDirty()
     }
 
@@ -642,6 +710,29 @@ class SettingsViewModel @Inject constructor(
         repository.updateValueCacheType(type)
         markRuntimeSettingsDirty()
     }
+
+    // PocketPal features
+    fun updateMinP(value: Float) = viewModelScope.launch {
+        repository.updateMinP(value)
+    }
+
+    fun updateSeed(value: Int) = viewModelScope.launch {
+        repository.updateSeed(value)
+    }
+
+    // PocketPal full parity — new completion params
+    fun updateXtcThreshold(value: Float) = viewModelScope.launch { repository.updateXtcThreshold(value) }
+    fun updateXtcProbability(value: Float) = viewModelScope.launch { repository.updateXtcProbability(value) }
+    fun updateTypicalP(value: Float) = viewModelScope.launch { repository.updateTypicalP(value) }
+    fun updatePenaltyLastN(value: Int) = viewModelScope.launch { repository.updatePenaltyLastN(value) }
+    fun updatePenaltyRepeat(value: Float) = viewModelScope.launch { repository.updatePenaltyRepeat(value) }
+    fun updatePenaltyFreq(value: Float) = viewModelScope.launch { repository.updatePenaltyFreq(value) }
+    fun updatePenaltyPresent(value: Float) = viewModelScope.launch { repository.updatePenaltyPresent(value) }
+    fun updateMirostat(value: Int) = viewModelScope.launch { repository.updateMirostat(value) }
+    fun updateMirostatTau(value: Float) = viewModelScope.launch { repository.updateMirostatTau(value) }
+    fun updateMirostatEta(value: Float) = viewModelScope.launch { repository.updateMirostatEta(value) }
+    fun updateJinja(value: Boolean) = viewModelScope.launch { repository.updateJinja(value) }
+    fun updateIncludeThinkingInContext(value: Boolean) = viewModelScope.launch { repository.updateIncludeThinkingInContext(value) }
 
     fun applyPendingRuntimeSettingChanges() {
         if (!runtimeSettingsDirty) return
@@ -690,4 +781,3 @@ class SettingsViewModel @Inject constructor(
         }
     }
 }
-

@@ -13,7 +13,10 @@ data class PromptBuildRequest(
     val tunedContextSize: Int,
     val explicitSystemPrompt: String,
     val fallbackSystemPrompt: String,
-    val currentSummary: String? = null
+    val currentSummary: String? = null,
+    // POCKETPAL FIX: Dynamic EOS detection — model file path pass karo
+    // taaki GGUF metadata se actual EOS token detect ho sake.
+    val modelPath: String? = null
 )
 
 data class PromptBuildOutput(
@@ -41,9 +44,11 @@ class PromptBuilderService @Inject constructor(
             .coerceAtLeast(if (ramGb <= 4) 128 else 128)
         val inputBudgetTokens = (request.tunedContextSize - generationReserveTokens).coerceAtLeast(128)
 
-        val resolvedProfile = templateResolver.resolve(
+        // POCKETPAL FIX: Dynamic EOS detection — model path se GGUF metadata padho.
+        val resolvedProfile = templateResolver.resolveWithModelPath(
             model = request.model,
-            explicitSystemPrompt = request.explicitSystemPrompt
+            explicitSystemPrompt = request.explicitSystemPrompt,
+            modelPath = request.modelPath
         )
 
         val effectiveSystemPrompt = resolvedProfile.systemPrompt
@@ -66,6 +71,11 @@ class PromptBuilderService @Inject constructor(
             remainingTokens -= estimateTokens(summaryMessage.content)
         }
 
+        // PERF FIX: History messages NEWEST FIRST order mein iterate karo.
+        // Oldest messages drop karo jab budget khatam ho — NEWEST messages preserve karo.
+        // Ye PocketPal ke convertToChatMessages() behavior ke saath match karta hai.
+        // CRITICAL for prefix caching: system prompt + recent turns stable rehte hain
+        // across consecutive messages, allowing KV cache hits.
         val selectedNewestFirst = mutableListOf<Message>()
         for (message in request.historyMessages.asReversed()) {
             val entry = message.content.trim()
@@ -97,7 +107,7 @@ class PromptBuilderService @Inject constructor(
         fun renderPrompt(history: List<Message>, userInput: String): String {
             return promptTemplateEngine.buildPrompt(
                 family = resolvedProfile.family,
-                systemPrompt = resolvedProfile.systemPrompt.ifBlank { request.fallbackSystemPrompt },
+                systemPrompt = resolvedProfile.systemPrompt, // PERF: blank = no system block in prompt
                 history = history,
                 currentUserInput = userInput,
                 bosEnabled = request.model.bosEnabled,

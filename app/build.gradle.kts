@@ -197,4 +197,7 @@ dependencies {
 
     // PDF Extraction (for RAG)
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+
+    // HTML Parsing (for Web Search)
+    implementation("org.jsoup:jsoup:1.17.2")
 }

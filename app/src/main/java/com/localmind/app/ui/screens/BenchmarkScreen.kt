@@ -80,7 +80,7 @@ fun BenchmarkScreen(
             AnimatedContent(
                 targetState = benchmarkState,
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(500)) with fadeOut(animationSpec = tween(500))
+                    fadeIn(animationSpec = tween(500)) togetherWith fadeOut(animationSpec = tween(500))
                 },
                 label = "BenchmarkStateTransition"
             ) { state ->
@@ -91,7 +91,12 @@ fun BenchmarkScreen(
                 ) {
                     when (state) {
                         is BenchmarkState.Idle -> IdleView(onStart = { viewModel.startBenchmark() })
-                        is BenchmarkState.Running -> RunningView(state.progress, state.currentTps)
+                        is BenchmarkState.Running -> RunningView(
+                            progress = state.progress,
+                            currentTps = state.currentTps,
+                            activeModel = activeModel,
+                            onStop = { viewModel.resetBenchmark() }
+                        )
                         is BenchmarkState.Complete -> CompleteView(state.result, onReset = { viewModel.resetBenchmark() })
                         is BenchmarkState.Error -> ErrorView(state.message, onReset = { viewModel.resetBenchmark() })
                     }
@@ -179,7 +184,12 @@ private fun IdleView(onStart: () -> Unit) {
 }
 
 @Composable
-private fun RunningView(progress: Float, currentTps: Float) {
+private fun RunningView(
+    progress: Float,
+    currentTps: Float,
+    activeModel: com.localmind.app.domain.model.Model? = null,
+    onStop: () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -216,10 +226,28 @@ private fun RunningView(progress: Float, currentTps: Float) {
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            "Testing 4-bit quantized GGUF throughput",
+            activeModel?.let { "Testing ${it.quantization} ${it.name} throughput" } ?: "Testing inference throughput",
             style = MaterialTheme.typography.bodySmall,
             color = NeonTextSecondary
         )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Stop button — benchmark cancel karo
+        OutlinedButton(
+            onClick = onStop,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonError),
+            border = androidx.compose.foundation.BorderStroke(1.5.dp, NeonError.copy(alpha = 0.7f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("ABORT TEST", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        }
     }
 }
 
@@ -494,6 +522,69 @@ private fun HardwareDashboard(
                         stats?.let { String.format("%.1f GB RAM | %d Cores", it.totalRamGb, Runtime.getRuntime().availableProcessors()) } ?: "--",
                         style = MaterialTheme.typography.bodySmall,
                         color = NeonTextExtraMuted
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "CONTEXT SIZE",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NeonTextSecondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        // Max cap clearly dikhao — Settings se sync
+                        activeModel?.let { "${com.localmind.app.core.Constants.MAX_CONTEXT_SIZE} (max)" } ?: "--",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = NeonText
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "QUANTIZATION",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NeonTextSecondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        activeModel?.quantization ?: "--",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = NeonText
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        "OS VERSION",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NeonTextSecondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Android ${android.os.Build.VERSION.RELEASE}",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = NeonText
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "FREE STORAGE",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NeonTextSecondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        stats?.availableStorage ?: "--",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = NeonText
                     )
                 }
             }

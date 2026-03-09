@@ -16,6 +16,7 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.localmind.app.R
+import com.localmind.app.core.storage.ModelStorageType
 import com.localmind.app.core.storage.StoredModelRef
 import com.localmind.app.core.storage.PersistentModelStorageManager
 import com.localmind.app.data.local.dao.DownloadTaskDao
@@ -26,7 +27,10 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import kotlin.math.abs
 
@@ -65,14 +69,25 @@ class DownloadModelWorker @AssistedInject constructor(
         createNotificationChannel()
 
         val notificationId = repoId.hashCode()
+        // Preserve existing progress on retries so the UI doesn't flash back to 0%
+        val existingTask = downloadTaskDao.getTaskById(taskId)
+        val initialProgress = existingTask?.progress?.takeIf {
+            existingTask.state == STATE_RETRY || existingTask.state == STATE_RUNNING
+        } ?: 0
+        val initialDownloadedBytes = existingTask?.downloadedBytes?.takeIf {
+            existingTask.state == STATE_RETRY || existingTask.state == STATE_RUNNING
+        } ?: 0L
+        val initialTotalBytes = existingTask?.totalBytes?.takeIf {
+            existingTask.state == STATE_RETRY || existingTask.state == STATE_RUNNING
+        } ?: 0L
         updateTaskState(
             taskId = taskId,
             modelId = modelId,
             fileName = fileName,
             state = STATE_RUNNING,
-            progress = 0,
-            downloadedBytes = 0L,
-            totalBytes = 0L,
+            progress = initialProgress,
+            downloadedBytes = initialDownloadedBytes,
+            totalBytes = initialTotalBytes,
             speedBps = 0L,
             etaSeconds = -1L
         )
@@ -80,7 +95,7 @@ class DownloadModelWorker @AssistedInject constructor(
             setForeground(createForegroundInfo(
                 notificationId = notificationId,
                 modelName = modelName,
-                progress = 0,
+                progress = initialProgress,
                 speedBps = 0L,
                 etaSeconds = -1L,
                 modelId = modelId
@@ -175,14 +190,16 @@ class DownloadModelWorker @AssistedInject constructor(
                 )
             )
         } catch (e: java.io.IOException) {
+            val retryTask = downloadTaskDao.getTaskById(taskId)
+            Log.w("LocalMind-Download", "Transient network error; scheduling retry for $modelName", e)
             updateTaskState(
                 taskId = taskId,
                 modelId = repoId.ifBlank { modelName },
                 fileName = fileName,
                 state = STATE_RETRY,
-                progress = 0,
-                downloadedBytes = 0L,
-                totalBytes = 0L,
+                progress = retryTask?.progress ?: 0,
+                downloadedBytes = retryTask?.downloadedBytes ?: 0L,
+                totalBytes = retryTask?.totalBytes ?: 0L,
                 speedBps = 0L,
                 etaSeconds = -1L,
                 errorMessage = "Network error"
@@ -231,6 +248,7 @@ class DownloadModelWorker @AssistedInject constructor(
             )
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "Download cancelled"))
         } catch (e: Exception) {
+            cleanupPartialArtifacts(fileName, includeCompletedFiles = true)
             val message = mapDownloadError(e)
             updateTaskState(
                 taskId = taskId,
@@ -259,6 +277,9 @@ class DownloadModelWorker @AssistedInject constructor(
     ): DownloadOutcome {
         val targetFiles = buildTargetFileNames(fileName)
         val modelId = repoId.ifBlank { modelName }
+        val modelsDir = File(applicationContext.filesDir, "models").apply {
+            if (!exists()) mkdirs()
+        }
         val storedParts = mutableListOf<StoredModelRef>()
         val startedAt = System.currentTimeMillis()
 
@@ -267,113 +288,215 @@ class DownloadModelWorker @AssistedInject constructor(
         var lastUpdateTime = startedAt
         var lastUpdateBytes = 0L
 
-        try {
-            for ((partIndex, partFileName) in targetFiles.withIndex()) {
-                throwIfStopped()
-                val partUrl = buildPartUrl(downloadUrl, partFileName)
-                val request = Request.Builder()
-                    .url(partUrl)
-                    .build()
+        for ((partIndex, partFileName) in targetFiles.withIndex()) {
+            throwIfStopped()
+            val partUrl = buildPartUrl(downloadUrl, partFileName)
+            val finalFile = File(modelsDir, partFileName)
+            val tempFile = File(modelsDir, "$partFileName.tmp")
 
-                downloadClient.newCall(request).execute().use { httpResponse ->
-                    if (!httpResponse.isSuccessful) {
-                        throw IllegalStateException(mapHttpError(httpResponse.code, targetFiles.size > 1))
+            if (finalFile.exists() && finalFile.isFile && finalFile.length() >= MIN_VALID_MODEL_BYTES) {
+                val existingStoredPart = storedRefForFile(finalFile)
+                validatePartFile(existingStoredPart, expectedBytes = 0L)
+                storedParts += existingStoredPart
+                aggregateDownloadedBytes += existingStoredPart.sizeBytes
+                aggregateKnownTotalBytes += existingStoredPart.sizeBytes
+
+                publishProgress(
+                    taskId = taskId,
+                    modelId = modelId,
+                    fileName = fileName,
+                    notificationId = notificationId,
+                    modelName = modelName,
+                    progress = (((partIndex + 1f) / targetFiles.size) * 100f).toInt().coerceIn(0, 99),
+                    downloadedBytes = aggregateDownloadedBytes,
+                    totalBytes = aggregateKnownTotalBytes,
+                    speedBps = 0L,
+                    etaSeconds = -1L
+                )
+                lastUpdateTime = System.currentTimeMillis()
+                lastUpdateBytes = aggregateDownloadedBytes
+                continue
+            }
+
+            var resumeFromBytes = if (tempFile.exists() && tempFile.isFile) {
+                tempFile.length().coerceAtLeast(0L)
+            } else {
+                0L
+            }
+            var resumeCounted = false
+            if (resumeFromBytes > 0L) {
+                aggregateDownloadedBytes += resumeFromBytes
+                resumeCounted = true
+                Log.i("LocalMind-Download", "Resuming $partFileName from byte=$resumeFromBytes")
+            }
+
+            val requestBuilder = Request.Builder().url(partUrl)
+            if (resumeFromBytes > 0L) {
+                requestBuilder.header("Range", "bytes=$resumeFromBytes-")
+            }
+            val request = requestBuilder.build()
+
+            downloadClient.newCall(request).execute().use { httpResponse ->
+                if (!httpResponse.isSuccessful) {
+                    // 416 can happen when the saved partial already matches remote length.
+                    if (httpResponse.code == 416 && resumeFromBytes > 0L && tempFile.exists()) {
+                        if (finalFile.exists()) {
+                            finalFile.delete()
+                        }
+                        if (!tempFile.renameTo(finalFile)) {
+                            throw IllegalStateException("Failed to finalize resumed model shard")
+                        }
+                        val storedPart = storedRefForFile(finalFile)
+                        validatePartFile(
+                            storedPart = storedPart,
+                            expectedBytes = if (targetFiles.size == 1 && expectedSizeBytes > 0L) {
+                                expectedSizeBytes
+                            } else {
+                                0L
+                            }
+                        )
+                        storedParts += storedPart
+                        aggregateKnownTotalBytes += storedPart.sizeBytes
+
+                        publishProgress(
+                            taskId = taskId,
+                            modelId = modelId,
+                            fileName = fileName,
+                            notificationId = notificationId,
+                            modelName = modelName,
+                            progress = (((partIndex + 1f) / targetFiles.size) * 100f).toInt().coerceIn(0, 99),
+                            downloadedBytes = aggregateDownloadedBytes,
+                            totalBytes = aggregateKnownTotalBytes,
+                            speedBps = 0L,
+                            etaSeconds = -1L
+                        )
+                        lastUpdateTime = System.currentTimeMillis()
+                        lastUpdateBytes = aggregateDownloadedBytes
+                        return@use
                     }
+                    throw IllegalStateException(mapHttpError(httpResponse.code, targetFiles.size > 1))
+                }
 
-                    val body = httpResponse.body ?: throw IllegalStateException("Empty response body")
-                    val partTotalBytes = body.contentLength().coerceAtLeast(0L)
-                    if (partTotalBytes > 0L) {
-                        aggregateKnownTotalBytes += partTotalBytes
-                    } else if (expectedSizeBytes > 0L && targetFiles.size == 1) {
-                        aggregateKnownTotalBytes = expectedSizeBytes
+                val body = httpResponse.body ?: throw IllegalStateException("Empty response body")
+                val resumedResponse = resumeFromBytes > 0L && httpResponse.code == 206
+                if (resumeFromBytes > 0L && !resumedResponse) {
+                    // If server ignores Range and returns 200, restart this shard from zero.
+                    if (resumeCounted) {
+                        aggregateDownloadedBytes = (aggregateDownloadedBytes - resumeFromBytes).coerceAtLeast(0L)
+                        resumeCounted = false
                     }
+                    resumeFromBytes = 0L
+                    if (tempFile.exists()) {
+                        tempFile.delete()
+                    }
+                    Log.w("LocalMind-Download", "Server ignored Range for $partFileName; restarting shard")
+                }
 
-                    var partDownloadedBytes = 0L
-                    val storedResult = storageManager.saveModel(partFileName) { output ->
-                        body.byteStream().use { input ->
-                            val buffer = ByteArray(8192)
-                            var bytesRead: Int
-                            while (input.read(buffer).also { bytesRead = it } != -1) {
-                                throwIfStopped()
-                                output.write(buffer, 0, bytesRead)
-                                partDownloadedBytes += bytesRead
-                                aggregateDownloadedBytes += bytesRead
+                val responseBytes = body.contentLength().coerceAtLeast(0L)
+                val partTotalBytes = when {
+                    responseBytes > 0L -> resumeFromBytes + responseBytes
+                    targetFiles.size == 1 && expectedSizeBytes > 0L -> expectedSizeBytes
+                    else -> 0L
+                }
+                if (partTotalBytes > 0L) {
+                    aggregateKnownTotalBytes += partTotalBytes
+                }
 
-                                val currentTime = System.currentTimeMillis()
-                                val timeDiff = currentTime - lastUpdateTime
-                                val shouldPublish = timeDiff >= 1000L ||
-                                    (partTotalBytes > 0L && partDownloadedBytes >= partTotalBytes)
+                var partDownloadedBytes = resumeFromBytes
+                FileOutputStream(tempFile, resumedResponse && resumeFromBytes > 0L).use { output ->
+                    body.byteStream().use { input ->
+                        val buffer = ByteArray(8192)
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            throwIfStopped()
+                            output.write(buffer, 0, bytesRead)
+                            partDownloadedBytes += bytesRead
+                            aggregateDownloadedBytes += bytesRead
 
-                                if (shouldPublish) {
-                                    val progress = computeProgressPercent(
-                                        partIndex = partIndex,
-                                        partDownloadedBytes = partDownloadedBytes,
-                                        partTotalBytes = partTotalBytes,
-                                        totalParts = targetFiles.size,
-                                        aggregateDownloadedBytes = aggregateDownloadedBytes,
-                                        aggregateKnownTotalBytes = aggregateKnownTotalBytes
-                                    )
-                                    val bytesSinceLast = aggregateDownloadedBytes - lastUpdateBytes
-                                    val speedBps = if (timeDiff > 0L) {
-                                        (bytesSinceLast * 1000L) / timeDiff
-                                    } else {
-                                        0L
-                                    }
-                                    val etaSeconds = if (speedBps > 0L && aggregateKnownTotalBytes > 0L) {
-                                        (aggregateKnownTotalBytes - aggregateDownloadedBytes)
-                                            .coerceAtLeast(0L) / speedBps
-                                    } else {
-                                        -1L
-                                    }
+                            val currentTime = System.currentTimeMillis()
+                            val timeDiff = currentTime - lastUpdateTime
+                            val shouldPublish = timeDiff >= 1000L ||
+                                (partTotalBytes > 0L && partDownloadedBytes >= partTotalBytes)
 
-                                    publishProgress(
-                                        taskId = taskId,
-                                        modelId = modelId,
-                                        fileName = fileName,
-                                        notificationId = notificationId,
-                                        modelName = modelName,
-                                        progress = progress,
-                                        downloadedBytes = aggregateDownloadedBytes,
-                                        totalBytes = aggregateKnownTotalBytes,
-                                        speedBps = speedBps,
-                                        etaSeconds = etaSeconds
-                                    )
-
-                                    lastUpdateTime = currentTime
-                                    lastUpdateBytes = aggregateDownloadedBytes
+                            if (shouldPublish) {
+                                val progress = computeProgressPercent(
+                                    partIndex = partIndex,
+                                    partDownloadedBytes = partDownloadedBytes,
+                                    partTotalBytes = partTotalBytes,
+                                    totalParts = targetFiles.size,
+                                    aggregateDownloadedBytes = aggregateDownloadedBytes,
+                                    aggregateKnownTotalBytes = aggregateKnownTotalBytes
+                                )
+                                val bytesSinceLast = aggregateDownloadedBytes - lastUpdateBytes
+                                val speedBps = if (timeDiff > 0L) {
+                                    (bytesSinceLast * 1000L) / timeDiff
+                                } else {
+                                    0L
                                 }
+                                val etaSeconds = if (speedBps > 0L && aggregateKnownTotalBytes > 0L) {
+                                    (aggregateKnownTotalBytes - aggregateDownloadedBytes)
+                                        .coerceAtLeast(0L) / speedBps
+                                } else {
+                                    -1L
+                                }
+
+                                publishProgress(
+                                    taskId = taskId,
+                                    modelId = modelId,
+                                    fileName = fileName,
+                                    notificationId = notificationId,
+                                    modelName = modelName,
+                                    progress = progress,
+                                    downloadedBytes = aggregateDownloadedBytes,
+                                    totalBytes = aggregateKnownTotalBytes,
+                                    speedBps = speedBps,
+                                    etaSeconds = etaSeconds
+                                )
+
+                                lastUpdateTime = currentTime
+                                lastUpdateBytes = aggregateDownloadedBytes
                             }
                         }
                     }
-
-                    val storedPart = storedResult.getOrElse { throw it }
-                    validatePartFile(
-                        storedPart = storedPart,
-                        expectedBytes = when {
-                            targetFiles.size == 1 && expectedSizeBytes > 0L -> expectedSizeBytes
-                            partTotalBytes > 0L -> partTotalBytes
-                            else -> 0L
-                        }
-                    )
-                    storedParts += storedPart
-
-                    publishProgress(
-                        taskId = taskId,
-                        modelId = modelId,
-                        fileName = fileName,
-                        notificationId = notificationId,
-                        modelName = modelName,
-                        progress = (((partIndex + 1f) / targetFiles.size) * 100f).toInt().coerceIn(0, 99),
-                        downloadedBytes = aggregateDownloadedBytes,
-                        totalBytes = aggregateKnownTotalBytes,
-                        speedBps = 0L,
-                        etaSeconds = -1L
-                    )
                 }
+
+                if (tempFile.length() <= 0L) {
+                    tempFile.delete()
+                    throw IllegalStateException("Downloaded model file appears corrupted")
+                }
+                if (finalFile.exists()) {
+                    finalFile.delete()
+                }
+                if (!tempFile.renameTo(finalFile)) {
+                    throw IllegalStateException("Failed to finalize model file")
+                }
+
+                val storedPart = storedRefForFile(finalFile)
+                validatePartFile(
+                    storedPart = storedPart,
+                    expectedBytes = when {
+                        targetFiles.size == 1 && expectedSizeBytes > 0L -> expectedSizeBytes
+                        partTotalBytes > 0L -> partTotalBytes
+                        else -> 0L
+                    }
+                )
+                storedParts += storedPart
+
+                publishProgress(
+                    taskId = taskId,
+                    modelId = modelId,
+                    fileName = fileName,
+                    notificationId = notificationId,
+                    modelName = modelName,
+                    progress = (((partIndex + 1f) / targetFiles.size) * 100f).toInt().coerceIn(0, 99),
+                    downloadedBytes = aggregateDownloadedBytes,
+                    totalBytes = aggregateKnownTotalBytes,
+                    speedBps = 0L,
+                    etaSeconds = -1L
+                )
+                lastUpdateTime = System.currentTimeMillis()
+                lastUpdateBytes = aggregateDownloadedBytes
             }
-        } catch (t: Throwable) {
-            cleanupStoredParts(storedParts)
-            throw t
         }
 
         val primaryPart = storedParts.firstOrNull { it.fileName.equals(fileName, ignoreCase = true) }
@@ -510,16 +633,31 @@ class DownloadModelWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun cleanupStoredParts(parts: List<StoredModelRef>) {
-        parts.forEach { part ->
-            try {
-                storageManager.deleteModel(
-                    storageType = part.storageType,
-                    filePath = part.filePath,
-                    storageUri = part.storageUri,
-                    fileName = part.fileName
-                )
-            } catch (_: Exception) {
+    private fun storedRefForFile(file: File): StoredModelRef {
+        return StoredModelRef(
+            storageType = ModelStorageType.INTERNAL,
+            filePath = file.absolutePath,
+            storageUri = null,
+            fileName = file.name,
+            sizeBytes = file.length()
+        )
+    }
+
+    private fun cleanupPartialArtifacts(
+        primaryFileName: String,
+        includeCompletedFiles: Boolean = false
+    ) {
+        val modelsDir = File(applicationContext.filesDir, "models")
+        if (!modelsDir.exists()) return
+
+        buildTargetFileNames(primaryFileName).forEach { partFileName ->
+            runCatching {
+                File(modelsDir, "$partFileName.tmp").delete()
+            }
+            if (includeCompletedFiles) {
+                runCatching {
+                    File(modelsDir, partFileName).delete()
+                }
             }
         }
     }
@@ -721,6 +859,11 @@ class DownloadModelWorker @AssistedInject constructor(
             return androidx.work.OneTimeWorkRequestBuilder<DownloadModelWorker>()
                 .setInputData(inputData)
                 .setConstraints(constraints)
+                .setBackoffCriteria(
+                    androidx.work.BackoffPolicy.LINEAR,
+                    30,
+                    TimeUnit.SECONDS
+                )
                 .addTag(modelTag(repoId))
                 .addTag(variantTag(repoId, fileName))
                 .addTag("download_$repoId")

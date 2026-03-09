@@ -74,8 +74,16 @@ class BenchmarkViewModel @Inject constructor(
                 _hardwareStats.value = stats
             }
         }
+        // Realtime: active model flow observe karo taaki Q4/Q8 etc live update ho
         viewModelScope.launch {
-            _activeModel.value = modelRepository.getActiveModel()
+            modelRepository.getActiveModelFlow().collect { model ->
+                if (model != null) _activeModel.value = model
+            }
+        }
+        viewModelScope.launch {
+            // Initial load
+            val m = modelRepository.getActiveModel()
+            if (m != null) _activeModel.value = m
         }
     }
 
@@ -215,7 +223,8 @@ class BenchmarkViewModel @Inject constructor(
                     promptEvalTimeMs = nativeMetrics?.promptEvalTimeMs ?: 0.0,
                     generationTimeMs = nativeMetrics?.generationTimeMs ?: 0.0,
                     modelLoadTimeMs = nativeMetrics?.modelLoadTimeMs ?: 0.0,
-                    contextSize = tunedConfig.contextSize,
+                    // MAX_CONTEXT_SIZE se cap karo — Settings ke saath sync
+                    contextSize = tunedConfig.contextSize.coerceAtMost(com.localmind.app.core.Constants.MAX_CONTEXT_SIZE),
                     threadCount = tunedConfig.threadCount
                 )
 

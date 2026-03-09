@@ -11,6 +11,7 @@ import com.localmind.app.data.local.dao.DownloadTaskDao
 import com.localmind.app.data.local.dao.MessageDao
 import com.localmind.app.data.local.dao.ModelDao
 import com.localmind.app.data.local.dao.PersonaDao
+import com.localmind.app.data.local.dao.PromptTemplateDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -185,6 +186,11 @@ object DatabaseModule {
             .addMigrations(LocalMindDatabase.MIGRATION_9_10)
             .addMigrations(LocalMindDatabase.MIGRATION_10_11)
             .addMigrations(LocalMindDatabase.MIGRATION_11_12)
+            .addMigrations(LocalMindDatabase.MIGRATION_12_13)
+            .addMigrations(LocalMindDatabase.MIGRATION_13_14)
+            .addMigrations(LocalMindDatabase.MIGRATION_14_15)
+            .addMigrations(LocalMindDatabase.MIGRATION_15_16)
+            .fallbackToDestructiveMigration()
             .build()
     }
 
@@ -216,5 +222,11 @@ object DatabaseModule {
     @Singleton
     fun provideDownloadTaskDao(database: LocalMindDatabase): DownloadTaskDao {
         return database.downloadTaskDao()
+    }
+
+    @Provides
+    @Singleton
+    fun providePromptTemplateDao(database: LocalMindDatabase): PromptTemplateDao {
+        return database.promptTemplateDao()
     }
 }

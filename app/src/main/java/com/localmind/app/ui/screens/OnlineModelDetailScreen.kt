@@ -157,18 +157,27 @@ fun OnlineModelDetailScreen(
                     }
 
                     items(model.variants, key = { "variant_${it.filename}" }) { variant ->
+                        val variantId = "${model.repoId}|${variant.filename}"
                         val isDownloading =
-                            state.pendingDownloadModelIds.contains(model.id) ||
-                                state.downloadingModels[model.id] != null
+                            state.pendingDownloadModelIds.contains(variantId) ||
+                                state.downloadingModels[variantId] != null
+                        val isDownloaded = state.downloadedModelIds.contains(variantId)
+                        val isActive = state.activeModelId == variantId
+
                         VariantCard(
                             variant = variant,
-                            downloadProgress = state.downloadingModels[model.id],
+                            downloadProgress = state.downloadingModels[variantId],
                             isDownloading = isDownloading,
+                            isDownloaded = isDownloaded,
+                            isActive = isActive,
                             onDownload = {
                                 viewModel.onVariantSelected(model.id, variant.filename)
                                 viewModel.downloadModelVariant(model, variant.filename)
                             },
-                            onCancel = { viewModel.cancelDownload(model.id) }
+                            onCancel = { viewModel.cancelDownload(variantId) },
+                            onActivate = { viewModel.activateModel(variantId) },
+                            onOffload = { viewModel.offloadModel() },
+                            onDelete = { viewModel.deleteModel(variantId) }
                         )
                     }
                 }
@@ -191,8 +200,13 @@ private fun VariantCard(
     variant: ModelVariant,
     downloadProgress: DownloadProgress?,
     isDownloading: Boolean,
+    isDownloaded: Boolean,
+    isActive: Boolean,
     onDownload: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onActivate: () -> Unit,
+    onOffload: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -218,10 +232,43 @@ private fun VariantCard(
                         fontSize = 13.sp
                     )
                 }
-
                 if (isDownloading) {
                     IconButton(onClick = onCancel, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Default.Close, null, tint = NeonError, modifier = Modifier.size(20.dp))
+                    }
+                } else if (isDownloaded) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (isActive) {
+                            Button(
+                                onClick = onOffload,
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonError.copy(alpha = 0.2f), contentColor = NeonError),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.PowerSettingsNew, null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("OFFLOAD", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            Button(
+                                onClick = onActivate,
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonSuccess, contentColor = NeonBackground),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("LOAD", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Delete, null, tint = NeonError, modifier = Modifier.size(20.dp))
+                        }
                     }
                 } else {
                     Button(

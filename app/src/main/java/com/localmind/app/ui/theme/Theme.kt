@@ -129,13 +129,6 @@ fun LocalMindTheme(
         )
     }
 
-    // Cast colors to Color type to avoid type inference issues with List<Any>
-    val safePrimary = primary as Color
-    val safePrimaryVariant = primaryVariant as Color
-    val safePrimaryLight = primaryLight as Color
-    val safeAccent = accent as Color
-    val safeAccentGlow = accentGlow as Color
-
     val neonColors = remember(darkMode, themeColor) {
         if (darkMode) {
             NeonColors(
@@ -146,11 +139,11 @@ fun LocalMindTheme(
                 textSecondary = LocalMindColors.DarkTextSecondary,
                 textTertiary = LocalMindColors.DarkTextTertiary,
                 textExtraMuted = LocalMindColors.DarkTextExtraMuted,
-                primary = safePrimary,
-                primaryVariant = safePrimaryVariant,
-                primaryLight = safePrimaryLight,
-                accent = safeAccent,
-                accentGlow = safeAccentGlow,
+                primary = primary,
+                primaryVariant = primaryVariant,
+                primaryLight = primaryLight,
+                accent = accent,
+                accentGlow = accentGlow,
                 success = LocalMindColors.Success,
                 warning = LocalMindColors.Warning,
                 error = LocalMindColors.Error,
@@ -166,11 +159,11 @@ fun LocalMindTheme(
                 textSecondary = LocalMindColors.LightTextSecondary,
                 textTertiary = LocalMindColors.LightTextTertiary,
                 textExtraMuted = LocalMindColors.LightTextExtraMuted,
-                primary = safePrimary,
-                primaryVariant = safePrimaryVariant,
-                primaryLight = safePrimaryLight,
-                accent = safeAccent,
-                accentGlow = safeAccentGlow,
+                primary = primary,
+                primaryVariant = primaryVariant,
+                primaryLight = primaryLight,
+                accent = accent,
+                accentGlow = accentGlow,
                 success = LocalMindColors.Success,
                 warning = LocalMindColors.Warning,
                 error = LocalMindColors.Error,
@@ -182,15 +175,15 @@ fun LocalMindTheme(
 
     val colorScheme = if (darkMode) {
         darkColorScheme(
-            primary = safePrimary,
+            primary = primary,
             onPrimary = LocalMindColors.DarkTextPrimary,
-            primaryContainer = safePrimaryVariant,
+            primaryContainer = primaryVariant,
             onPrimaryContainer = LocalMindColors.DarkTextPrimary,
-            secondary = safePrimaryLight,
+            secondary = primaryLight,
             onSecondary = LocalMindColors.DarkTextPrimary,
             secondaryContainer = LocalMindColors.DarkElevated,
             onSecondaryContainer = LocalMindColors.DarkTextSecondary,
-            tertiary = safeAccent,
+            tertiary = accent,
             onTertiary = LocalMindColors.DarkTextPrimary,
             background = LocalMindColors.DarkBackground,
             onBackground = LocalMindColors.DarkTextPrimary,
@@ -205,15 +198,15 @@ fun LocalMindTheme(
         )
     } else {
         lightColorScheme(
-            primary = safePrimary,
+            primary = primary,
             onPrimary = Color.White,
-            primaryContainer = safePrimaryLight,
+            primaryContainer = primaryLight,
             onPrimaryContainer = Color.White,
-            secondary = safePrimary,
+            secondary = primary,
             onSecondary = Color.White,
             secondaryContainer = LocalMindColors.LightElevated,
             onSecondaryContainer = LocalMindColors.LightTextSecondary,
-            tertiary = safeAccent,
+            tertiary = accent,
             onTertiary = Color.White,
             background = LocalMindColors.LightBackground,
             onBackground = LocalMindColors.LightTextPrimary,

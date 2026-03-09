@@ -33,154 +33,137 @@ class HuggingFaceRepository @Inject constructor(
 ) {
 
     /**
-     * Curated list of phone-compatible GGUF LLM models from Hugging Face
+     * Curated list — exact same as PocketPal AI defaultModels.ts (v14)
+     * Sizes taken directly from HuggingFace LFS metadata (accurate bytes)
      */
     fun getCuratedModels(): List<HuggingFaceModelInfo> {
         return listOf(
-            HuggingFaceModelInfo(
-                id = "llama-3.2-1b-q8",
-                name = "Llama-3.2-1b-instruct (Q8_0)",
-                repoId = "bartowski/Llama-3.2-1B-Instruct-GGUF",
-                author = "Meta",
-                description = "Meta's ultra-small Llama 3.2 model. Extremely fast on mobile devices.",
-                parameterCount = "1B",
-                sizeGb = 1.31,
-                quantization = "Q8_0",
-                ggufFileName = "Llama-3.2-1B-Instruct-Q8_0.gguf",
-                downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q8_0.gguf",
-                category = ModelCategory.TINY,
-                minRamGb = 4,
-                tags = listOf("meta", "llama", "fast")
-            ),
 
+            // -------- Gemma --------
             HuggingFaceModelInfo(
-                id = "gemma-2-2b-q6",
+                id = "bartowski/gemma-2-2b-it-GGUF|gemma-2-2b-it-Q6_K.gguf",
                 name = "Gemma-2-2b-it (Q6_K)",
                 repoId = "bartowski/gemma-2-2b-it-GGUF",
                 author = "Google",
-                description = "Google's efficient 2B instruction-tuned model. Excellent reasoning for its size.",
-                parameterCount = "2B",
-                sizeGb = 2.15,
+                description = "Google's Gemma 2 2B instruction-tuned model. Excellent reasoning and summarization.",
+                parameterCount = "2.6B",
+                sizeGb = 2.00,  // 2,151,393,120 bytes = 2.00 GB
                 quantization = "Q6_K",
                 ggufFileName = "gemma-2-2b-it-Q6_K.gguf",
                 downloadUrl = "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q6_K.gguf",
                 category = ModelCategory.SMALL,
                 minRamGb = 4,
-                tags = listOf("google", "gemma", "balanced")
+                tags = listOf("google", "gemma", "reasoning", "summarization")
             ),
+
             HuggingFaceModelInfo(
-                id = "gemmasutra-2b-q6",
+                id = "TheDrummer/Gemmasutra-Mini-2B-v1-GGUF|Gemmasutra-Mini-2B-v1-Q6_K.gguf",
                 name = "Gemmasutra-Mini-2B-v1 (Q6_K)",
-                repoId = "bartowski/Gemmasutra-Mini-2B-v1-GGUF",
-                author = "bartowski",
-                description = "Custom-tuned Gemma variant for improved conversation dynamics.",
-                parameterCount = "2B",
-                sizeGb = 2.15,
+                repoId = "TheDrummer/Gemmasutra-Mini-2B-v1-GGUF",
+                author = "TheDrummer",
+                description = "Gemma-based roleplay model fine-tuned by TheDrummer. Great for creative conversations.",
+                parameterCount = "2.6B",
+                sizeGb = 2.00,  // 2,151,393,152 bytes = 2.00 GB
                 quantization = "Q6_K",
                 ggufFileName = "Gemmasutra-Mini-2B-v1-Q6_K.gguf",
-                downloadUrl = "https://huggingface.co/bartowski/Gemmasutra-Mini-2B-v1-GGUF/resolve/main/Gemmasutra-Mini-2B-v1-Q6_K.gguf",
+                downloadUrl = "https://huggingface.co/TheDrummer/Gemmasutra-Mini-2B-v1-GGUF/resolve/main/Gemmasutra-Mini-2B-v1-Q6_K.gguf",
                 category = ModelCategory.SMALL,
                 minRamGb = 4,
-                tags = listOf("gemma", "tuned")
+                tags = listOf("gemma", "roleplay", "creative")
             ),
+
+            // -------- Phi --------
             HuggingFaceModelInfo(
-                id = "phi-3.5-mini-q4",
-                name = "Phi-3.5 mini instruct (Q4_K_M)",
-                repoId = "bartowski/Phi-3.5-mini-instruct-GGUF",
+                id = "MaziyarPanahi/Phi-3.5-mini-instruct-GGUF|Phi-3.5-mini-instruct.Q4_K_M.gguf",
+                name = "Phi-3.5 mini 4k instruct (Q4_K_M)",
+                repoId = "MaziyarPanahi/Phi-3.5-mini-instruct-GGUF",
                 author = "Microsoft",
-                description = "Microsoft's latest mini model. Best-in-class reasoning and coding for mobile.",
+                description = "Microsoft's Phi-3.5 mini model. Exceptional at reasoning, code, and math for its size.",
                 parameterCount = "3.8B",
-                sizeGb = 2.39,
+                sizeGb = 2.23,  // 2,393,232,608 bytes = 2.23 GB
                 quantization = "Q4_K_M",
-                ggufFileName = "Phi-3.5-mini-instruct-Q4_K_M.gguf",
-                downloadUrl = "https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf",
+                ggufFileName = "Phi-3.5-mini-instruct.Q4_K_M.gguf",
+                downloadUrl = "https://huggingface.co/MaziyarPanahi/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct.Q4_K_M.gguf",
                 category = ModelCategory.MEDIUM,
-                minRamGb = 6,
-                tags = listOf("microsoft", "phi", "reasoning")
-            ),
-            HuggingFaceModelInfo(
-                id = "phi-3.5-mini-q2",
-                name = "Phi-3.5 mini instruct (Q2_K - 2B Size)",
-                repoId = "bartowski/Phi-3.5-mini-instruct-GGUF",
-                author = "Microsoft",
-                description = "Ultra-compressed 2-bit version of Phi-3.5. Fits in ~1.4GB, ideal for low RAM.",
-                parameterCount = "3.8B",
-                sizeGb = 1.42,
-                quantization = "Q2_K",
-                ggufFileName = "Phi-3.5-mini-instruct-Q2_K.gguf",
-                downloadUrl = "https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q2_K.gguf",
-                category = ModelCategory.SMALL,
                 minRamGb = 4,
-                tags = listOf("microsoft", "phi", "2bit", "lightweight")
+                tags = listOf("microsoft", "phi", "reasoning", "code", "math", "multilingual")
             ),
+
+            // -------- Qwen --------
             HuggingFaceModelInfo(
-                id = "phi-2-2.7b-q6",
-                name = "Phi-2 (Q6_K)",
-                repoId = "bartowski/phi-2-GGUF",
-                author = "Microsoft",
-                description = "Microsoft's classic 2.7B model. High quality reasoning for its size.",
-                parameterCount = "2.7B",
-                sizeGb = 2.31,
-                quantization = "Q6_K",
-                ggufFileName = "phi-2-Q6_K.gguf",
-                downloadUrl = "https://huggingface.co/bartowski/phi-2-GGUF/resolve/main/phi-2-Q6_K.gguf",
-                category = ModelCategory.SMALL,
-                minRamGb = 4,
-                tags = listOf("microsoft", "phi2", "classic")
-            ),
-            HuggingFaceModelInfo(
-                id = "qwen2.5-1.5b-q8",
+                id = "Qwen/Qwen2.5-1.5B-Instruct-GGUF|qwen2.5-1.5b-instruct-q8_0.gguf",
                 name = "Qwen2.5-1.5B-Instruct (Q8_0)",
-                repoId = "bartowski/Qwen2.5-1.5B-Instruct-GGUF",
+                repoId = "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
                 author = "Alibaba",
-                description = "Alibaba's efficient 1.5B model. Highly multilingual and fast.",
-                parameterCount = "1.5B",
-                sizeGb = 1.89,
+                description = "Alibaba's compact 1.5B multilingual model. Fast and capable for instructions and roleplay.",
+                parameterCount = "1.8B",
+                sizeGb = 1.76,  // 1,894,532,128 bytes = 1.76 GB
                 quantization = "Q8_0",
-                ggufFileName = "Qwen2.5-1.5B-Instruct-Q8_0.gguf",
-                downloadUrl = "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q8_0.gguf",
+                ggufFileName = "qwen2.5-1.5b-instruct-q8_0.gguf",
+                downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q8_0.gguf",
                 category = ModelCategory.SMALL,
                 minRamGb = 4,
-                tags = listOf("alibaba", "qwen", "multilingual")
+                tags = listOf("alibaba", "qwen", "multilingual", "instructions")
             ),
+
             HuggingFaceModelInfo(
-                id = "qwen2.5-3b-q5",
+                id = "Qwen/Qwen2.5-3B-Instruct-GGUF|qwen2.5-3b-instruct-q5_k_m.gguf",
                 name = "Qwen2.5-3B-Instruct (Q5_K_M)",
-                repoId = "bartowski/Qwen2.5-3B-Instruct-GGUF",
+                repoId = "Qwen/Qwen2.5-3B-Instruct-GGUF",
                 author = "Alibaba",
-                description = "Alibaba's 3B model. Strong general performance and reasoning.",
-                parameterCount = "3B",
-                sizeGb = 2.44,
+                description = "Alibaba's 3B multilingual model. Strong general performance with excellent instruction following.",
+                parameterCount = "3.4B",
+                sizeGb = 2.27,  // 2,438,740,384 bytes = 2.27 GB
                 quantization = "Q5_K_M",
-                ggufFileName = "Qwen2.5-3B-Instruct-Q5_K_M.gguf",
-                downloadUrl = "https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-Q5_K_M.gguf",
+                ggufFileName = "qwen2.5-3b-instruct-q5_k_m.gguf",
+                downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q5_k_m.gguf",
                 category = ModelCategory.MEDIUM,
-                minRamGb = 6,
-                tags = listOf("alibaba", "qwen", "powerful")
+                minRamGb = 4,
+                tags = listOf("alibaba", "qwen", "multilingual", "powerful")
             ),
+
+            // -------- Llama --------
             HuggingFaceModelInfo(
-                id = "llama-3.2-3b-q6",
+                id = "hugging-quants/Llama-3.2-1B-Instruct-Q8_0-GGUF|llama-3.2-1b-instruct-q8_0.gguf",
+                name = "Llama-3.2-1b-instruct (Q8_0)",
+                repoId = "hugging-quants/Llama-3.2-1B-Instruct-Q8_0-GGUF",
+                author = "Meta",
+                description = "Meta's ultra-compact Llama 3.2 1B model. Fastest on-device inference with decent quality.",
+                parameterCount = "1.2B",
+                sizeGb = 1.23,  // 1,321,079,200 bytes = 1.23 GB
+                quantization = "Q8_0",
+                ggufFileName = "llama-3.2-1b-instruct-q8_0.gguf",
+                downloadUrl = "https://huggingface.co/hugging-quants/Llama-3.2-1B-Instruct-Q8_0-GGUF/resolve/main/llama-3.2-1b-instruct-q8_0.gguf",
+                category = ModelCategory.SMALL,
+                minRamGb = 4,
+                tags = listOf("meta", "llama", "fast", "summarization")
+            ),
+
+            HuggingFaceModelInfo(
+                id = "bartowski/Llama-3.2-3B-Instruct-GGUF|Llama-3.2-3B-Instruct-Q6_K.gguf",
                 name = "Llama-3.2-3B-Instruct (Q6_K)",
                 repoId = "bartowski/Llama-3.2-3B-Instruct-GGUF",
                 author = "Meta",
-                description = "Meta's state-of-the-art 3B model. Balanced intelligence and speed.",
-                parameterCount = "3B",
-                sizeGb = 2.64,
+                description = "Meta's 3B Llama 3.2 model. Balanced speed and quality for instructions and summarization.",
+                parameterCount = "3.2B",
+                sizeGb = 2.46,  // 2,643,853,856 bytes = 2.46 GB
                 quantization = "Q6_K",
                 ggufFileName = "Llama-3.2-3B-Instruct-Q6_K.gguf",
                 downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q6_K.gguf",
                 category = ModelCategory.MEDIUM,
                 minRamGb = 6,
-                tags = listOf("meta", "llama", "smart")
+                tags = listOf("meta", "llama", "smart", "summarization")
             ),
+
+            // -------- SmolLM --------
             HuggingFaceModelInfo(
-                id = "smollm2-1.7b-q8",
+                id = "bartowski/SmolLM2-1.7B-Instruct-GGUF|SmolLM2-1.7B-Instruct-Q8_0.gguf",
                 name = "SmolLM2-1.7B-Instruct (Q8_0)",
                 repoId = "bartowski/SmolLM2-1.7B-Instruct-GGUF",
                 author = "HuggingFace",
-                description = "HuggingFace's own SmolLM2. Optimized for lightweight on-device chat.",
+                description = "HuggingFace's SmolLM2 optimized for lightweight on-device chat. Fast and efficient.",
                 parameterCount = "1.7B",
-                sizeGb = 1.82,
+                sizeGb = 1.70,  // 1,820,414,944 bytes = 1.70 GB
                 quantization = "Q8_0",
                 ggufFileName = "SmolLM2-1.7B-Instruct-Q8_0.gguf",
                 downloadUrl = "https://huggingface.co/bartowski/SmolLM2-1.7B-Instruct-GGUF/resolve/main/SmolLM2-1.7B-Instruct-Q8_0.gguf",
@@ -188,20 +171,22 @@ class HuggingFaceRepository @Inject constructor(
                 minRamGb = 4,
                 tags = listOf("huggingface", "smol", "fast")
             ),
+
+            // -------- SmolVLM (Vision) --------
             HuggingFaceModelInfo(
-                id = "smolvlm2-500m-q8",
-                name = "SmolVLM-500M-Instruct (Q8_0)",
+                id = "ggml-org/SmolVLM-500M-Instruct-GGUF|SmolVLM-500M-Instruct-Q8_0.gguf",
+                name = "SmolVLM2-500M-Instruct (Q8_0)",
                 repoId = "ggml-org/SmolVLM-500M-Instruct-GGUF",
-                author = "ggml-org",
-                description = "Small multimodal model capazble of seeing images and responding.",
+                author = "HuggingFace",
+                description = "Compact vision-language model. Can see and understand images on-device.",
                 parameterCount = "0.5B",
-                sizeGb = 0.54,
+                sizeGb = 0.42,  // 436,806,912 bytes + mmproj 108,783,360 = 0.51 GB total
                 quantization = "Q8_0",
                 ggufFileName = "SmolVLM-500M-Instruct-Q8_0.gguf",
                 downloadUrl = "https://huggingface.co/ggml-org/SmolVLM-500M-Instruct-GGUF/resolve/main/SmolVLM-500M-Instruct-Q8_0.gguf",
                 category = ModelCategory.TINY,
                 minRamGb = 4,
-                tags = listOf("huggingface", "vision", "multimodal")
+                tags = listOf("huggingface", "vision", "multimodal", "smolvlm")
             )
         )
     }

@@ -59,7 +59,8 @@ fun TypewriterText(
                     displayedText = text
                 } else {
                     // Small increment — tiny delay for smooth feel (max 1 frame)
-                    delay(16L)
+                    val boundedTypingDelay = typingSpeedMs.coerceIn(0L, 33L)
+                    delay(boundedTypingDelay)
                     displayedText = text
                 }
             } else {

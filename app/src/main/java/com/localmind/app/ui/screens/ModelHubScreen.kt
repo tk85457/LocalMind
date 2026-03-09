@@ -39,7 +39,6 @@ import com.localmind.app.ui.viewmodel.HuggingFaceViewModel
 fun ModelHubScreen(
     onNavigateBack: () -> Unit,
     onOnlineModelDetail: (String) -> Unit,
-    onNavigateToChat: () -> Unit,
     viewModel: HuggingFaceViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -145,24 +144,30 @@ fun ModelHubScreen(
                 }
             } else {
                 items(state.filteredModels, key = { "online_${it.id}" }) { model ->
-                    val downloadProgress = state.downloadingModels[model.id]
+                    val downloadEntry = state.downloadingModels[model.id]
+                    val isDownloading = downloadEntry != null
+                    val isPending = state.pendingDownloadModelIds.contains(model.id)
                     ModelListItem(
                         name = model.name,
                         sizeText = String.format("%.1f GB", model.sizeGb),
-                        isActive = model.id == state.activeModelId,
+                        isActive = false,
                         isLocal = model.isDownloaded,
+                        isWorking = isDownloading,
+                        isPending = isPending && !isDownloading,
+                        progress = downloadEntry?.progress,
+                        downloadedBytes = downloadEntry?.downloadedBytes,
+                        totalBytes = downloadEntry?.totalBytes,
+                        downloadSpeed = downloadEntry?.speedBps?.let {
+                            com.localmind.app.ui.components.DownloadMetricsFormatter.formatSpeed(it)
+                        },
+                        eta = downloadEntry?.etaSeconds?.let {
+                            com.localmind.app.ui.components.DownloadMetricsFormatter.formatEta(it)
+                        },
                         supportsVision = model.isVision,
-                        isPending = state.pendingDownloadModelIds.contains(model.id),
-                        progress = downloadProgress?.progress,
-                        downloadedBytes = downloadProgress?.downloadedBytes,
-                        totalBytes = downloadProgress?.totalBytes,
-                        downloadSpeed = downloadProgress?.speedBps?.let { DownloadMetricsFormatter.formatSpeed(it) },
-                        eta = downloadProgress?.etaSeconds?.let { DownloadMetricsFormatter.formatEta(it) },
-                        onActivate = { viewModel.activateModel(model.id) },
-                        onDownload = { viewModel.downloadModel(model) },
-                        onCancelDownload = { viewModel.cancelDownload(model.id) },
-                        onDelete = { viewModel.deleteModel(model.id) },
-                        onDetails = { onOnlineModelDetail(model.repoId) }
+                        onDownload = { /* handled via onDetails */ },
+                        onCancelDownload = { /* cancel not wired on hub screen */ },
+                        onDetails = { onOnlineModelDetail(model.repoId) },
+                        isOnlineHub = true
                     )
                 }
 
@@ -184,5 +189,4 @@ fun ModelHubScreen(
         }
     }
 }
-
 

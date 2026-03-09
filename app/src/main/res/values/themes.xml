@@ -14,9 +14,9 @@
     <style name="Theme.LocalMind" parent="Base.Theme.LocalMind" />
 
     <style name="Theme.LocalMind.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenBackground">@android:color/transparent</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-        <item name="windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+        <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
         <item name="postSplashScreenTheme">@style/Theme.LocalMind</item>
     </style>
 </resources>

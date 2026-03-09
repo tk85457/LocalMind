@@ -15,12 +15,20 @@ interface DownloadTaskDao {
     @Query("SELECT * FROM download_tasks WHERE modelId = :modelId ORDER BY updatedAt DESC LIMIT 1")
     fun getTaskByModelFlow(modelId: String): Flow<DownloadTaskEntity?>
 
+    /**
+     * One-shot suspend query — used in DownloadOrchestrator to check for an
+     * existing active task BEFORE creating a new UUID, so we never reset
+     * progress to 0 while a download is still running or retrying.
+     */
+    @Query("SELECT * FROM download_tasks WHERE modelId = :modelId ORDER BY updatedAt DESC LIMIT 1")
+    suspend fun getLatestTaskByModelId(modelId: String): DownloadTaskEntity?
+
     @Query("SELECT * FROM download_tasks WHERE taskId = :taskId LIMIT 1")
     suspend fun getTaskById(taskId: String): DownloadTaskEntity?
 
     @Query("DELETE FROM download_tasks WHERE modelId = :modelId")
     suspend fun deleteByModelId(modelId: String)
 
-    @Query("SELECT * FROM download_tasks WHERE state IN ('RUNNING', 'ENQUEUED')")
+    @Query("SELECT * FROM download_tasks WHERE state IN ('RUNNING', 'ENQUEUED', 'RETRY')")
     fun getActiveTasksFlow(): Flow<List<DownloadTaskEntity>>
 }

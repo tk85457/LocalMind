@@ -86,8 +86,8 @@ object NetworkModule {
         return OkHttpClient.Builder()
             .addInterceptor(hfAuthHeaderInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(5, TimeUnit.MINUTES)
-            .writeTimeout(5, TimeUnit.MINUTES)
+            .readTimeout(30, TimeUnit.MINUTES)
+            .writeTimeout(30, TimeUnit.MINUTES)
             .build()
     }
 }

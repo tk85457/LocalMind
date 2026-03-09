@@ -173,112 +173,69 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
                         showExitDialog = true
                     }
 
-                    ModalNavigationDrawer(
+                    // Active conversation ID — route se extract karo
+                    val activeConvId = remember(currentRoute) {
+                        navBackStackEntry?.arguments?.getString("conversationId")
+                    }
+
+                    AdaptiveAppContent(
+                        isExpanded = screenWidthDp >= 600.dp,
                         drawerState = drawerState,
-                        drawerContent = {
-                            ModalDrawerSheet {
-                                Spacer(Modifier.height(24.dp))
-                                com.localmind.app.ui.components.NavigationDrawerContent(
-                                    currentRoute = currentRoute,
-                                    recentConversations = recentConversations,
-                                    onNavigate = ::safeNavigate,
-                                    onConversationClick = { conversationId ->
-                                        scope.launch {
-                                            if (navigationInFlight) return@launch
-                                            navigationInFlight = true
-                                            try {
-                                                drawerState.close()
-                                                val chatDestinationId = navController.graph.findNode(Routes.CHAT_WITH_ID)?.id
-                                                navController.navigate(Routes.chat(conversationId)) {
-                                                    if (chatDestinationId != null) {
-                                                        popUpTo(chatDestinationId) {
-                                                            inclusive = true
-                                                            saveState = false
-                                                        }
-                                                    }
-                                                    launchSingleTop = true
-                                                    restoreState = false
-                                                }
-                                            } catch (cancelled: CancellationException) {
-                                                throw cancelled
-                                            } catch (t: Throwable) {
-                                                Log.w(
-                                                    "LocalMind-Nav",
-                                                    "Conversation navigation failed for id=$conversationId",
-                                                    t
-                                                )
-                                                Toast.makeText(
-                                                    localContext,
-                                                    localContext.getString(R.string.navigation_open_conversation_failed),
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            } finally {
-                                                navigationInFlight = false
+                        currentRoute = currentRoute,
+                        recentConversations = recentConversations,
+                        activeConversationId = activeConvId,
+                        onNavigate = ::safeNavigate,
+                        onConversationClick = { conversationId ->
+                            scope.launch {
+                                if (navigationInFlight) return@launch
+                                navigationInFlight = true
+                                try {
+                                    drawerState.close()
+                                    val chatDestinationId = navController.graph.findNode(Routes.CHAT_WITH_ID)?.id
+                                    navController.navigate(Routes.chat(conversationId)) {
+                                        if (chatDestinationId != null) {
+                                            popUpTo(chatDestinationId) {
+                                                inclusive = true
+                                                saveState = false
                                             }
                                         }
-                                    },
-                                    onDeleteConversation = { conversationId ->
-                                        conversationHistoryViewModel.deleteConversation(conversationId)
+                                        launchSingleTop = true
+                                        restoreState = false
                                     }
+                                } catch (cancelled: CancellationException) {
+                                    throw cancelled
+                                } catch (t: Throwable) {
+                                    Log.w("LocalMind-Nav", "Conv navigation failed", t)
+                                } finally {
+                                    navigationInFlight = false
+                                }
+                            }
+                        },
+                        onDeleteConversation = { conversationHistoryViewModel.deleteConversation(it) },
+                        onRenameConversation = { id, title -> conversationHistoryViewModel.renameConversation(id, title) },
+                        content = {
+                            if (onboardingCompleted == null) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
+                            } else if (!isAppUnlocked && settings.biometricLock) {
+                                BiometricLockScreen(onUnlock = {
+                                    biometricHelper.showBiometricPrompt(
+                                        onSuccess = { isAppUnlocked = true },
+                                        onError = { Toast.makeText(this@MainActivity, it, Toast.LENGTH_SHORT).show() }
+                                    )
+                                })
+                            } else {
+                                val nextDestination = if (onboardingCompleted == true) Routes.CHAT else Routes.ONBOARDING
+                                NavGraph(
+                                    navController = navController,
+                                    onOpenDrawer = { scope.launch { drawerState.open() } },
+                                    nextDestination = nextDestination,
+                                    startDestination = Routes.SPLASH
                                 )
                             }
                         }
-                    ) {
-                        if (onboardingCompleted == null) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
-                        } else if (!isAppUnlocked && settings.biometricLock) {
-                            Box(
-                                modifier = Modifier.fillMaxSize()
-                                    .background(MaterialTheme.colorScheme.background),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        Icons.Default.Lock,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(64.dp),
-                                        tint = com.localmind.app.ui.theme.NeonPrimary
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        "App Locked",
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        color = com.localmind.app.ui.theme.NeonText
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Button(
-                                        onClick = {
-                                            biometricHelper.showBiometricPrompt(
-                                                onSuccess = { isAppUnlocked = true },
-                                                onError = { Toast.makeText(this@MainActivity, it, Toast.LENGTH_SHORT).show() }
-                                            )
-                                        },
-                                        colors = ButtonDefaults.buttonColors(containerColor = com.localmind.app.ui.theme.NeonPrimary)
-                                    ) {
-                                        Text("Unlock", color = androidx.compose.ui.graphics.Color.Black)
-                                    }
-                                }
-                            }
-                        } else {
-                            val nextDestination = if (onboardingCompleted == true) {
-                                Routes.CHAT
-                            } else {
-                                Routes.ONBOARDING
-                            }
-
-                            NavGraph(
-                                navController = navController,
-                                onOpenDrawer = { scope.launch { drawerState.open() } },
-                                nextDestination = nextDestination,
-                                startDestination = Routes.SPLASH
-                            )
-                        }
-                    }
+                    )
 
                     // Permission Flow
                     val context = androidx.compose.ui.platform.LocalContext.current
@@ -366,7 +323,101 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
             // Using Routes.MODEL_MANAGER would be better if accessible, defaulting to string literal for safety
             // assuming Routes.MODEL_MANAGER const value is "model_manager"
             navigationChannel.trySend(Routes.MODEL_MANAGER)
-            intent?.removeExtra("navigate_to")
+            intent.removeExtra("navigate_to")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdaptiveAppContent(
+    isExpanded: Boolean,
+    drawerState: DrawerState,
+    currentRoute: String?,
+    recentConversations: List<com.localmind.app.domain.model.Conversation>,
+    activeConversationId: String? = null,
+    onNavigate: (String) -> Unit,
+    onConversationClick: (String) -> Unit,
+    onDeleteConversation: (String) -> Unit,
+    onRenameConversation: (String, String) -> Unit = { _, _ -> },
+    content: @Composable () -> Unit
+) {
+    if (isExpanded) {
+        PermanentNavigationDrawer(
+            drawerContent = {
+                PermanentDrawerSheet(
+                    modifier = Modifier.width(320.dp),
+                    drawerContainerColor = com.localmind.app.ui.theme.NeonSurface,
+                    drawerContentColor = com.localmind.app.ui.theme.NeonText
+                ) {
+                    com.localmind.app.ui.components.NavigationDrawerContent(
+                        currentRoute = currentRoute,
+                        recentConversations = recentConversations,
+                        activeConversationId = activeConversationId,
+                        onNavigate = onNavigate,
+                        onConversationClick = onConversationClick,
+                        onDeleteConversation = onDeleteConversation,
+                        onRenameConversation = onRenameConversation
+                    )
+                }
+            }
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                content()
+            }
+        }
+    } else {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet(
+                    drawerContainerColor = com.localmind.app.ui.theme.NeonSurface,
+                    drawerContentColor = com.localmind.app.ui.theme.NeonText
+                ) {
+                    com.localmind.app.ui.components.NavigationDrawerContent(
+                        currentRoute = currentRoute,
+                        recentConversations = recentConversations,
+                        activeConversationId = activeConversationId,
+                        onNavigate = onNavigate,
+                        onConversationClick = onConversationClick,
+                        onDeleteConversation = onDeleteConversation,
+                        onRenameConversation = onRenameConversation
+                    )
+                }
+            }
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+fun BiometricLockScreen(onUnlock: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = com.localmind.app.ui.theme.NeonPrimary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "App Locked",
+                style = MaterialTheme.typography.headlineMedium,
+                color = com.localmind.app.ui.theme.NeonText
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onUnlock,
+                colors = ButtonDefaults.buttonColors(containerColor = com.localmind.app.ui.theme.NeonPrimary)
+            ) {
+                Text("Unlock", color = androidx.compose.ui.graphics.Color.Black)
+            }
         }
     }
 }

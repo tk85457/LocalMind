@@ -26,6 +26,9 @@ class HybridInferenceRouter @Inject constructor(
     private val _lastTelemetry = MutableStateFlow<InferenceTelemetry?>(null)
     val lastTelemetry: StateFlow<InferenceTelemetry?> = _lastTelemetry.asStateFlow()
 
+    // FIX #5: Synchronous accessor for ChatRepository.getLastInferenceTelemetry()
+    fun latestTelemetry(): InferenceTelemetry? = _lastTelemetry.value
+
     fun generate(
         prompt: String,
         config: InferenceConfig,
@@ -89,8 +92,6 @@ class HybridInferenceRouter @Inject constructor(
             }
         }
     }.flowOn(Dispatchers.IO)
-
-    fun latestTelemetry(): InferenceTelemetry? = _lastTelemetry.value
 
     private suspend fun runEngine(
         engine: ChatInferenceEngine,

@@ -29,6 +29,8 @@ import com.localmind.app.ui.viewmodel.SettingsViewModel
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToPersonas: () -> Unit = {},
+    onNavigateToPromptTemplates: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -50,7 +52,8 @@ fun SettingsScreen(
         }
     }
 
-    DisposableEffect(viewModel) {
+    // Apply pending settings only on screen exit (not on back button which also calls it)
+    DisposableEffect(Unit) {
         onDispose {
             viewModel.applyPendingRuntimeSettingChanges()
         }
@@ -63,10 +66,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text(androidx.compose.ui.res.stringResource(com.localmind.app.R.string.settings_title), color = NeonText) },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        viewModel.applyPendingRuntimeSettingChanges()
-                        onNavigateBack()
-                    }) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = NeonText)
                     }
                 },
@@ -149,30 +149,8 @@ fun SettingsScreen(
                 onAutoDeleteDaysChange = { viewModel.updateAutoDeleteDays(it) }
             )
 
-            // Storage & Backup (Modularized)
-            val isClearingCache by viewModel.isClearingCache.collectAsStateWithLifecycle()
-            val isGeneratingExport by viewModel.isExporting.collectAsState(initial = false)
-            val isImportingData by viewModel.isImporting.collectAsState(initial = false)
 
-            ExportSettingsSection(
-                context = context,
-                settings = settings,
-                isExporting = isGeneratingExport,
-                isImporting = isImportingData,
-                isClearingCache = isClearingCache,
-                onExportChats = {
-                    val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
-                    // Note: Export logic handled by component or passed launcher
-                    // For now, keeping the launcher logic in component if possible or passing it
-                },
-                onImportChats = { uri -> viewModel.importChatsFromJsonUri(uri, context) },
-                onClearCache = { viewModel.clearCache(context) },
-                onPermissionRequest = {
-                    // Logic handled in component or passed
-                }
-            )
-
-            // Advanced Inference (Modularized)
+            // Advanced Inference (Modularized) — Full PocketPal parity
             AdvancedInferenceSection(
                 settings = settings,
                 maxThreads = maxThreads,
@@ -185,10 +163,43 @@ fun SettingsScreen(
                 onBatchSizeChange = { viewModel.updateBatchSize(it) },
                 onPhysicalBatchSizeChange = { viewModel.updatePhysicalBatchSize(it) },
                 onFlashAttentionChange = { viewModel.updateFlashAttention(it) },
+                onUseMlockChange = { viewModel.updateUseMlock(it) },
+                onUseMmapChange = { viewModel.updateUseMmap(it) },
                 onKeyCacheTypeChange = { viewModel.updateKeyCacheType(it) },
                 onValueCacheTypeChange = { viewModel.updateValueCacheType(it) },
-                onShowRamWarning = { showRamWarning = it }
+                onShowRamWarning = { showRamWarning = it },
+                onMinPChange = { viewModel.updateMinP(it) },
+                onSeedChange = { viewModel.updateSeed(it) },
+                // PocketPal full parity — new params
+                onXtcThresholdChange = { viewModel.updateXtcThreshold(it) },
+                onXtcProbabilityChange = { viewModel.updateXtcProbability(it) },
+                onTypicalPChange = { viewModel.updateTypicalP(it) },
+                onPenaltyLastNChange = { viewModel.updatePenaltyLastN(it) },
+                onPenaltyRepeatChange = { viewModel.updatePenaltyRepeat(it) },
+                onPenaltyFreqChange = { viewModel.updatePenaltyFreq(it) },
+                onPenaltyPresentChange = { viewModel.updatePenaltyPresent(it) },
+                onMirostatChange = { viewModel.updateMirostat(it) },
+                onMirostatTauChange = { viewModel.updateMirostatTau(it) },
+                onMirostatEtaChange = { viewModel.updateMirostatEta(it) },
+                onJinjaChange = { viewModel.updateJinja(it) },
+                onIncludeThinkingInContextChange = { viewModel.updateIncludeThinkingInContext(it) }
             )
+
+            // Customization Section
+            SettingsSection(title = "Customization") {
+                SettingsItem(
+                    icon = Icons.Default.SmartToy,
+                    title = "Manage Pals (Personas)",
+                    subtitle = "Create and edit AI personas",
+                    onClick = onNavigateToPersonas
+                )
+                SettingsItem(
+                    icon = Icons.Default.AutoAwesome,
+                    title = "Prompt Library",
+                    subtitle = "Save and reuse custom prompts",
+                    onClick = onNavigateToPromptTemplates
+                )
+            }
 
             // About Section
             SettingsSection(title = stringResource(R.string.settings_about)) {

@@ -2,6 +2,7 @@
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -150,10 +151,17 @@ fun ModelManagerScreen(
 
                     items(hubState.curatedModels, key = { "curated_${it.id}" }) { model ->
                         val isDownloading = hubState.downloadingModels.containsKey(model.id)
-                        val progress = hubState.downloadingModels[model.id]?.progress
+                        val downloadEntry = hubState.downloadingModels[model.id]
+                        val progress = downloadEntry?.progress
                         val isPending = hubState.pendingDownloadModelIds.contains(model.id)
-                        val downloadedBytes = hubState.downloadingModels[model.id]?.downloadedBytes
-                        val totalBytes = hubState.downloadingModels[model.id]?.totalBytes
+                        val downloadedBytes = downloadEntry?.downloadedBytes
+                        val totalBytes = downloadEntry?.totalBytes
+                        val downloadSpeed = downloadEntry?.speedBps?.let {
+                            com.localmind.app.ui.components.DownloadMetricsFormatter.formatSpeed(it)
+                        }
+                        val eta = downloadEntry?.etaSeconds?.let {
+                            com.localmind.app.ui.components.DownloadMetricsFormatter.formatEta(it)
+                        }
 
                         ModelListItem(
                             name = model.name,
@@ -165,6 +173,8 @@ fun ModelManagerScreen(
                             progress = progress,
                             downloadedBytes = downloadedBytes,
                             totalBytes = totalBytes,
+                            downloadSpeed = downloadSpeed,
+                            eta = eta,
                             supportsVision = model.isVision,
                             onActivate = {
                                 if (model.isDownloaded) {
@@ -240,6 +250,12 @@ fun ModelManagerScreen(
                             contentColor = NeonPrimary,
                             shape = RoundedCornerShape(16.dp)
                         ) {
+                            Image(
+                                painter = androidx.compose.ui.res.painterResource(id = R.drawable.hf_hugging_icon),
+                                contentDescription = "Hugging Face",
+                                modifier = Modifier.size(26.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.model_hub_add_from_hf), fontWeight = FontWeight.Bold)
                         }
 
@@ -512,7 +528,17 @@ fun ModelSettingsDialog(
                     Text(
                         "Reset",
                         color = NeonTextExtraMuted,
-                        modifier = Modifier.clickable { /* Reset */ }.padding(8.dp)
+                        modifier = Modifier.clickable {
+                            bos = model.bosEnabled
+                            eos = model.eosEnabled
+                            addGenPrompt = model.addGenPrompt
+                            systemPrompt = model.recommendedSystemPrompt ?: ""
+                            stopWords = runCatching {
+                                val array = org.json.JSONArray(model.stopTokensJson)
+                                List(array.length()) { i -> array.getString(i) }
+                            }.getOrElse { listOf("<|eot_id|>") }
+                            newStopWord = ""
+                        }.padding(8.dp)
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         TextButton(onClick = onDismiss) {

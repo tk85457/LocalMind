@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,15 +56,39 @@ fun ModelListItem(
     onSettings: () -> Unit = {},
     onDetails: () -> Unit = {},
     onDownload: () -> Unit = {},
-    onCancelDownload: () -> Unit = {}
+    onCancelDownload: () -> Unit = {},
+    isOnlineHub: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showCancelConfirm by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f)
+
+    // Cancel download confirmation dialog
+    if (showCancelConfirm) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirm = false },
+            containerColor = NeonSurface,
+            title = { Text("Cancel Download?", color = NeonText, fontWeight = FontWeight.Bold) },
+            text = { Text("Download progress will be lost.", color = NeonTextSecondary) },
+            confirmButton = {
+                TextButton(onClick = { showCancelConfirm = false; onCancelDownload() }) {
+                    Text("Cancel Download", color = NeonError)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelConfirm = false }) {
+                    Text("Keep Downloading", color = NeonPrimary)
+                }
+            }
+        )
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { expanded = !expanded },
+            .clickable {
+                if (isOnlineHub) onDetails() else expanded = !expanded
+            },
         colors = CardDefaults.cardColors(containerColor = NeonSurface),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, NeonTextExtraMuted.copy(alpha = 0.2f))
@@ -115,7 +140,8 @@ fun ModelListItem(
             }
 
             // Action Row: Primary Button + Utility Icons
-            if (isPending || progress != null) {
+            if (!isOnlineHub) {
+                if (isPending || progress != null) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     LinearProgressIndicator(
                         progress = { progress?.coerceIn(0f, 1f) ?: 0f },
@@ -158,7 +184,7 @@ fun ModelListItem(
                                 }
                             }
                         }
-                        TextButton(onClick = onCancelDownload, contentPadding = PaddingValues(0.dp)) {
+                        TextButton(onClick = { showCancelConfirm = true }, contentPadding = PaddingValues(0.dp)) {
                             Text("Cancel", color = NeonError, fontSize = 12.sp)
                         }
                     }
@@ -246,10 +272,11 @@ fun ModelListItem(
                     }
                 }
             }
+        }
 
-            // Inline Detail Preview (matches image 4 expandable areas)
+        // Inline Detail Preview (matches image 4 expandable areas)
             AnimatedVisibility(
-                visible = expanded,
+                visible = expanded && !isOnlineHub,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {

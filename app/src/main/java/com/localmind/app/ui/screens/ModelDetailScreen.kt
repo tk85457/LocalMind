@@ -5,8 +5,6 @@ package com.localmind.app.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,7 +39,8 @@ fun ModelDetailScreen(
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     var hardwareExpanded by remember { mutableStateOf(true) }
-    var briefExpanded by remember { mutableStateOf(false) }
+    var briefExpanded by remember { mutableStateOf(true) }
+    var showPurgeDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -249,10 +248,7 @@ fun ModelDetailScreen(
                         }
 
                         OutlinedButton(
-                            onClick = {
-                                // Show confirmation before deletion in a real app
-                                viewModel.deleteModel { onNavigateBack() }
-                            },
+                            onClick = { showPurgeDialog = true },
                             modifier = Modifier.weight(1f).height(56.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonError),
@@ -267,8 +263,16 @@ fun ModelDetailScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                val hfContext = androidx.compose.ui.platform.LocalContext.current
                 Button(
-                    onClick = { /* Check on HuggingFace logic */ },
+                    onClick = {
+                        val modelName = currentModel.name
+                        val query = modelName.replace(" ", "+")
+                        val uri = android.net.Uri.parse("https://huggingface.co/models?search=$query")
+                        hfContext.startActivity(
+                            android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = NeonElevated),
                     shape = RoundedCornerShape(16.dp)
@@ -281,7 +285,50 @@ fun ModelDetailScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
+
+        // Purge confirmation dialog
+        if (showPurgeDialog && model != null) {
+            PurgeConfirmDialog(
+                modelName = model!!.name,
+                onConfirm = {
+                    showPurgeDialog = false
+                    viewModel.deleteModel { onNavigateBack() }
+                },
+                onDismiss = { showPurgeDialog = false }
+            )
+        }
     }
+}
+
+// PURGE confirmation dialog hoisted outside Scaffold
+@Composable
+private fun PurgeConfirmDialog(
+    modelName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = com.localmind.app.ui.theme.NeonSurface,
+        title = { Text("Purge Model?", color = com.localmind.app.ui.theme.NeonText, fontWeight = FontWeight.Bold) },
+        text = {
+            Text(
+                "\"$modelName\" permanently delete ho jaayega. Isko wapas download karna hoga.",
+                color = com.localmind.app.ui.theme.NeonTextSecondary
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = com.localmind.app.ui.theme.NeonError)
+            ) { Text("Purge", fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = com.localmind.app.ui.theme.NeonPrimary)
+            }
+        }
+    )
 }
 
 @Composable

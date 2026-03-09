@@ -1,0 +1,28 @@
+03-06 23:15:05.914 14806 14871 I LLMEngine: Initializing native backend [dir=/data/app/~~M-eL6SbXjhyO3_GbWUK9Xg==/com.localmind.app-hSLFCmEFej5gGas_ATes9w==/lib/arm64]
+03-06 23:15:05.929 14806 14871 I LocalMind-Native: Backend init attempt explicit dir: /data/app/~~M-eL6SbXjhyO3_GbWUK9Xg==/com.localmind.app-hSLFCmEFej5gGas_ATes9w==/lib/arm64 (exists=1)
+03-06 23:15:06.023 14806 14871 I LocalMind-Native: GGML backend registry count after load: 1
+03-06 23:15:06.026 14806 14871 I LLMEngine: Native backend init result=true
+03-06 23:15:06.126 14806 14845 I LLMEngine: GPU not supported by hardware: GPU=PowerVR Rogue GE8320 | Adreno=false | i8mm=false | dotprod=false | supported=false — forcing CPU-only
+03-06 23:15:06.141 14806 14845 I LLMEngine: Loading model: /data/user/0/com.localmind.app/files/models/SmolVLM-500M-Instruct-Q8_0.gguf [mlock=true, mmap=true, ctx=4096, threads=6, gpu=0]
+03-06 23:15:06.143 14806 14845 I LLMEngine: Native load attempt [cpu-primary] ctx=4096, gpu=0, mlock=true, mmap=true, batch=1024, ubatch=512, prefillThreads=6
+03-06 23:15:06.147 14806 14845 I LocalMind-Native: Native: Loading model from /data/user/0/com.localmind.app/files/models/SmolVLM-500M-Instruct-Q8_0.gguf [gpu_layers=0, mmap=1]
+03-06 23:15:09.751 14806 14845 I LocalMind-Native: Native: Model loaded in 3603.71ms [requested_gpu=0]
+03-06 23:15:09.752 14806 14845 I LocalMind-Native: Native: Context params [ctx=4096, threads=2, batch=1024, ubatch=512, flash=1, type_k=8, type_v=8, defrag=0.10]
+03-06 23:15:09.895 14806 14845 I LocalMind-Native: Native: Context initialized successfully
+03-06 23:15:09.896 14806 14845 I LLMEngine: Model loaded successfully [gpu=0]
+03-06 23:15:10.114 14806 14806 I LLMEngine: Generation stop requested
+03-06 23:15:10.117 14806 14845 I LLMEngine: Unloading model
+03-06 23:15:10.346 14806 14845 I LLMEngine: Model unloaded
+03-06 23:15:11.887 14806 14845 I LLMEngine: Loading model: /data/user/0/com.localmind.app/files/models/SmolVLM-500M-Instruct-Q8_0.gguf [mlock=true, mmap=true, ctx=4096, threads=6, gpu=0]
+03-06 23:15:11.888 14806 14845 I LLMEngine: Native load attempt [cpu-primary] ctx=4096, gpu=0, mlock=true, mmap=true, batch=1024, ubatch=512, prefillThreads=6
+03-06 23:15:11.889 14806 14845 I LocalMind-Native: Native: Loading model from /data/user/0/com.localmind.app/files/models/SmolVLM-500M-Instruct-Q8_0.gguf [gpu_layers=0, mmap=1]
+03-06 23:15:12.850 14806 14845 I LocalMind-Native: Native: Model loaded in 961.34ms [requested_gpu=0]
+03-06 23:15:12.850 14806 14845 I LocalMind-Native: Native: Context params [ctx=4096, threads=2, batch=1024, ubatch=512, flash=1, type_k=8, type_v=8, defrag=0.10]
+03-06 23:15:12.959 14806 14845 I LocalMind-Native: Native: Context initialized successfully
+03-06 23:15:12.959 14806 14845 I LLMEngine: Model loaded successfully [gpu=0]
+03-06 23:15:20.642 14806 14871 I LocalMind-Native: Native: Prefix cache cleared
+03-06 23:15:20.664 14806 14867 I LocalMind-Native: Native: Starting generation [tokens=78]
+03-06 23:15:20.664 14806 14867 I LocalMind-Native: Prefix caching: no common prefix, clearing KV cache
+03-06 23:15:25.683 14806 14867 I LocalMind-Native: Native: Prefill complete [time=5019.46ms, cached=0]
+03-06 23:15:42.132 14806 14867 I LocalMind-Native: Native: Prefix cache updated [total_tokens=152]
+03-06 23:15:42.132 14806 14867 I LocalMind-Native: Native: Generation complete [tokens=74, speed=4.50 t/s]
