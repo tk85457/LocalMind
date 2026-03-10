@@ -1,4 +1,4 @@
-package com.localmind.app.data.repository
+﻿package com.localmind.app.data.repository
 
 import android.content.Context
 import com.localmind.app.core.storage.PersistentModelStorageManager
@@ -237,32 +237,98 @@ class HuggingFaceRepository @Inject constructor(
         val author = response.author ?: repoId.split("/").firstOrNull() ?: "HF"
         val name = repoId.split("/").lastOrNull() ?: repoId
 
-        // Find a GGUF file in siblings or fallback to tags
-        val ggufFile = response.siblings?.find { it.filename.endsWith(".gguf", ignoreCase = true) }?.filename
+        // Pick best GGUF: prefer Q4_K_M, fallback to first GGUF in siblings
+        val ggufSiblings = response.siblings?.filter { it.filename.endsWith(".gguf", ignoreCase = true) } ?: emptyList()
+        val preferredGguf = ggufSiblings.firstOrNull { it.filename.contains("Q4_K_M", ignoreCase = true) }
+            ?: ggufSiblings.firstOrNull()
+        val ggufFile = preferredGguf?.filename
             ?: response.tags?.find { it.endsWith(".gguf", ignoreCase = true) }
             ?: "model.gguf"
 
-        // Estimate size if possible, or use a default large enough for storage check
-        // Most GGUF models are around 1-4GB. Reducing estimates to prevent false positives.
-        val sizeGb = if (repoId.contains("7b", ignoreCase = true)) 3.5 // Was 4.5
-                      else if (repoId.contains("3b", ignoreCase = true)) 1.8 // Was 2.2
-                      else 1.0 // Was 1.2
+        // Real size from HF LFS metadata — lfs.size = actual file bytes (not pointer size)
+        val realSizeBytes = preferredGguf?.lfs?.size
+            ?: preferredGguf?.size?.takeIf { it > 1_000_000L }
+            ?: ggufSiblings.mapNotNull { it.lfs?.size ?: it.size?.takeIf { s -> s > 1_000_000L } }.maxOrNull()
+
+        // Use real size if available, else fallback estimate from model name
+        val sizeGb = if (realSizeBytes != null && realSizeBytes > 0L) {
+            realSizeBytes / (1024.0 * 1024.0 * 1024.0)
+        } else {
+            estimateSizeGbFromName(repoId)
+        }
+
+        val paramCount = parseParamCount(repoId)
 
         return HuggingFaceModelInfo(
             id = repoId,
             name = name,
             repoId = repoId,
             author = author,
-            description = "HF Model • ${response.downloads} downloads • ${response.likes} likes",
-            parameterCount = if (repoId.contains("7b", ignoreCase = true)) "7B" else "Unknown",
+            description = "HF Model - ${response.downloads} downloads - ${response.likes} likes",
+            parameterCount = paramCount,
             sizeGb = sizeGb,
-            quantization = "Q4_K_M",
+            quantization = detectQuantization(ggufFile),
             ggufFileName = ggufFile,
             downloadUrl = "https://huggingface.co/$repoId/resolve/main/$ggufFile",
-            category = if (sizeGb > 3.0) ModelCategory.MEDIUM else ModelCategory.SMALL,
-            minRamGb = if (sizeGb > 3.0) 8 else 4,
+            category = when {
+                sizeGb > 6.0 -> ModelCategory.MEDIUM
+                sizeGb > 3.0 -> ModelCategory.MEDIUM
+                else -> ModelCategory.SMALL
+            },
+            minRamGb = when {
+                sizeGb > 6.0 -> 12
+                sizeGb > 3.0 -> 8
+                else -> 4
+            },
             tags = response.tags ?: emptyList()
         )
+    }
+
+    /** Fallback size estimate when HF API returns no LFS metadata */
+    private fun estimateSizeGbFromName(repoId: String): Double {
+        val lower = repoId.lowercase()
+        return when {
+            lower.contains("70b") -> 40.0
+            lower.contains("34b") || lower.contains("35b") -> 20.0
+            lower.contains("27b") -> 16.0
+            lower.contains("13b") || lower.contains("14b") -> 8.0
+            lower.contains("9b") -> 5.5
+            lower.contains("8b") -> 5.0
+            lower.contains("7b") -> 4.0
+            lower.contains("4b") -> 2.5
+            lower.contains("3b") -> 2.0
+            lower.contains("2b") -> 1.5
+            lower.contains("1.5b") || lower.contains("1b") -> 1.0
+            lower.contains("500m") || lower.contains("300m") -> 0.5
+            else -> 2.0
+        }
+    }
+
+    /** Parse human-readable param count from repo name */
+    private fun parseParamCount(repoId: String): String {
+        val regex = Regex("(\\d+(?:\\.\\d+)?)[Bb]")
+        val match = regex.find(repoId.split("/").lastOrNull() ?: repoId)
+        return if (match != null) "${match.groupValues[1]}B" else "Unknown"
+    }
+
+    /** Detect quantization type from GGUF filename */
+    private fun detectQuantization(filename: String): String {
+        val upper = filename.uppercase()
+        return when {
+            upper.contains("Q4_K_M") -> "Q4_K_M"
+            upper.contains("Q4_K_S") -> "Q4_K_S"
+            upper.contains("Q5_K_M") -> "Q5_K_M"
+            upper.contains("Q5_K_S") -> "Q5_K_S"
+            upper.contains("Q6_K") -> "Q6_K"
+            upper.contains("Q8_0") -> "Q8_0"
+            upper.contains("Q3_K_M") -> "Q3_K_M"
+            upper.contains("Q2_K") -> "Q2_K"
+            upper.contains("IQ4_XS") -> "IQ4_XS"
+            upper.contains("IQ3_XS") -> "IQ3_XS"
+            upper.contains("F16") -> "F16"
+            upper.contains("BF16") -> "BF16"
+            else -> "Q4_K_M"
+        }
     }
 
     /**

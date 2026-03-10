@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +37,7 @@ import com.localmind.app.ui.viewmodel.HuggingFaceViewModel
 fun OnlineModelDetailScreen(
     repoId: String,
     onNavigateBack: () -> Unit,
+    onNavigateToChat: () -> Unit = {},
     viewModel: HuggingFaceViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -45,6 +47,15 @@ fun OnlineModelDetailScreen(
     }
     DisposableEffect(Unit) {
         onDispose { viewModel.clearOnlineModelDetails() }
+    }
+
+    // Navigate to chat after model loads successfully
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvents.collectLatest { event ->
+            if (event is HuggingFaceViewModel.NavigationEvent.NavigateToChat) {
+                onNavigateToChat()
+            }
+        }
     }
 
     Scaffold(
@@ -163,6 +174,7 @@ fun OnlineModelDetailScreen(
                                 state.downloadingModels[variantId] != null
                         val isDownloaded = state.downloadedModelIds.contains(variantId)
                         val isActive = state.activeModelId == variantId
+                        val isLoading = state.autoActivatingModelIds.contains(variantId)
 
                         VariantCard(
                             variant = variant,
@@ -170,6 +182,7 @@ fun OnlineModelDetailScreen(
                             isDownloading = isDownloading,
                             isDownloaded = isDownloaded,
                             isActive = isActive,
+                            isLoading = isLoading,
                             onDownload = {
                                 viewModel.onVariantSelected(model.id, variant.filename)
                                 viewModel.downloadModelVariant(model, variant.filename)
@@ -202,6 +215,7 @@ private fun VariantCard(
     isDownloading: Boolean,
     isDownloaded: Boolean,
     isActive: Boolean,
+    isLoading: Boolean = false,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
     onActivate: () -> Unit,
@@ -252,6 +266,34 @@ private fun VariantCard(
                                 Icon(Icons.Default.PowerSettingsNew, null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("OFFLOAD", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                        } else if (isLoading) {
+                            // Loading spinner while model is being activated
+                            Box(
+                                modifier = Modifier
+                                    .height(36.dp)
+                                    .defaultMinSize(minWidth = 80.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(NeonSuccess.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        color = NeonSuccess,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Text(
+                                        "LOADING",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = NeonSuccess
+                                    )
+                                }
                             }
                         } else {
                             Button(

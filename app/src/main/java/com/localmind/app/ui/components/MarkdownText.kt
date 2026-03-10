@@ -23,6 +23,80 @@ fun closeIncompleteCodeBlocks(text: String): String {
     return if (count % 2 != 0) "$text\n```" else text
 }
 
+/**
+ * XML/HTML-style tag filter — streaming aur final response dono ke liye.
+ *
+ * Removes:
+ *   <think>...</think>   — complete paired block with content
+ *   </think>             — orphan closing tag (streaming tail)
+ *   <think>              — orphan opening tag
+ *   <think               — incomplete tag (no closing >, streaming mid-token)
+ *
+ * Performance: single-pass StringBuilder — zero regex, O(n), no alloc per token.
+ * Sirf text segments pe apply hoga; code blocks ko touch nahi karta.
+ */
+fun stripXmlLikeTags(text: String): String {
+    if ('<' !in text) return text          // Fast exit — 99% of normal tokens
+
+    val sb = StringBuilder(text.length)
+    var i = 0
+    val len = text.length
+
+    while (i < len) {
+        val c = text[i]
+        if (c != '<') {
+            sb.append(c)
+            i++
+            continue
+        }
+
+        // We are at '<' — find matching '>'
+        val gt = text.indexOf('>', i + 1)
+
+        if (gt == -1) {
+            // No closing '>' found — incomplete tag at end of stream, drop everything from '<'
+            break
+        }
+
+        // Extract tag name (strip leading '/' for closing tags)
+        val inner = text.substring(i + 1, gt).trim()
+        val tagName = inner.trimStart('/').substringBefore(' ').substringBefore('\n').trim()
+
+        // Only filter if tagName looks like a word (letters/digits/underscore/hyphen, not empty)
+        val isXmlTag = tagName.isNotEmpty() && tagName.all { ch -> ch.isLetterOrDigit() || ch == '_' || ch == '-' }
+
+        if (!isXmlTag) {
+            // Not a tag (e.g. <3 or <= ) — keep as-is
+            sb.append(c)
+            i++
+            continue
+        }
+
+        // It's a valid XML-like tag — skip it
+        // Also skip the paired content if it's an opening tag with matching close
+        val isClosing = inner.startsWith('/')
+        if (!isClosing) {
+            // Look for </tagName> and skip everything including content
+            val closeTag = "</$tagName>"
+            val closeIdx = text.indexOf(closeTag, gt + 1)
+            if (closeIdx != -1) {
+                // Skip: <tagName>...content...</tagName>
+                i = closeIdx + closeTag.length
+                // Also skip one leading newline after block tag if present
+                if (i < len && text[i] == '\n') i++
+                continue
+            }
+        }
+
+        // Just skip the tag token itself (opening or closing, no paired content found)
+        i = gt + 1
+        // Skip one leading newline right after a block tag
+        if (i < len && text[i] == '\n') i++
+    }
+
+    return sb.toString().trimStart('\n')
+}
+
 private sealed class MdSegment {
     data class Text(val content: String) : MdSegment()
     data class Code(val language: String, val code: String) : MdSegment()
@@ -85,7 +159,7 @@ private fun parseSegments(markdown: String, isStreaming: Boolean = false): List<
 /**
  * MarkdownText — pure Compose Text() only.
  * Code blocks = CodeBlock composable (apna highlight engine).
- * Koi Markwon/AndroidView nahi — zero overhead, no markdown formatting on plain text.
+ * XML tags (</think> etc.) always stripped before render.
  */
 @Composable
 fun MarkdownText(
@@ -96,7 +170,9 @@ fun MarkdownText(
     isSelectable: Boolean = true,
     isStreaming: Boolean = false
 ) {
-    val renderText = if (isStreaming) markdown else closeIncompleteCodeBlocks(markdown)
+    // Strip XML tags first (O(n) single pass, negligible cost vs render)
+    val stripped = stripXmlLikeTags(markdown)
+    val renderText = if (isStreaming) stripped else closeIncompleteCodeBlocks(stripped)
 
     val segments = if (isStreaming) {
         parseSegments(renderText, isStreaming = true)

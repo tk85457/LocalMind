@@ -96,7 +96,7 @@ class ModelCatalogRepository @Inject constructor(
         val response = runCatching {
             val call = api.getModelDetails(
                 repoId = normalizedRepoId,
-                expand = "siblings"
+                full = true
             )
             val res = call.execute()
             if (!res.isSuccessful) throw Exception("API Error: ${res.code()}")
@@ -134,7 +134,7 @@ class ModelCatalogRepository @Inject constructor(
                 sort = sort,
                 direction = direction,
                 limit = 80,
-                expand = "siblings"
+                full = true
             )
             val response = call.execute()
             if (!response.isSuccessful) throw Exception("API Error: ${response.code()}")

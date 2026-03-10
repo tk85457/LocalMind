@@ -162,6 +162,8 @@ fun ModelManagerScreen(
                         val eta = downloadEntry?.etaSeconds?.let {
                             com.localmind.app.ui.components.DownloadMetricsFormatter.formatEta(it)
                         }
+                        // isLoading = true when LOAD button pressed (model activating)
+                        val isActivating = hubState.autoActivatingModelIds.contains(model.id)
 
                         ModelListItem(
                             name = model.name,
@@ -169,7 +171,7 @@ fun ModelManagerScreen(
                             isActive = model.id == activeModel?.id,
                             isLocal = model.isDownloaded,
                             isPending = isPending && !isDownloading,
-                            isWorking = isDownloading,
+                            isWorking = isDownloading || isActivating,
                             progress = progress,
                             downloadedBytes = downloadedBytes,
                             totalBytes = totalBytes,
@@ -178,7 +180,9 @@ fun ModelManagerScreen(
                             supportsVision = model.isVision,
                             onActivate = {
                                 if (model.isDownloaded) {
-                                    viewModel.activateModelById(model.id)
+                                    // Use huggingFaceViewModel so autoActivatingModelIds
+                                    // is set — this drives the isWorking/spinner on LOAD
+                                    huggingFaceViewModel.activateModel(model.id)
                                 } else {
                                     huggingFaceViewModel.downloadModel(model)
                                 }

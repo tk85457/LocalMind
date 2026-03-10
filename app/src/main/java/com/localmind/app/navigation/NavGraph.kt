@@ -192,7 +192,13 @@ fun NavGraph(
             val repoId = backStackEntry.arguments?.getString("repoId")?.let(Uri::decode).orEmpty()
             OnlineModelDetailScreen(
                 repoId = repoId,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToChat = {
+                    navController.navigate(Routes.CHAT) {
+                        popUpTo(Routes.CHAT) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 

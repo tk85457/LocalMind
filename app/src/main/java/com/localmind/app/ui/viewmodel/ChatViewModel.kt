@@ -926,9 +926,14 @@ class ChatViewModel @Inject constructor(
                                         Pair("", fullText)
                                     }
 
+                                    // Strip any leaked XML tags from visible streaming text
+                                    // O(n) single pass — no regex, negligible perf impact
+                                    val cleanMain = com.localmind.app.ui.components.stripXmlLikeTags(
+                                        mainContent.trimStart()
+                                    )
                                     _state.update {
                                         val newState = it.copy(
-                                            streamingResponse = mainContent.trimStart().ifBlank { null },
+                                            streamingResponse = cleanMain.ifBlank { null },
                                             streamingReasoning = thinkContent.ifBlank { null }
                                         )
                                         if (liveTelemetry != null) newState.copy(streamingTelemetry = liveTelemetry) else newState
@@ -1452,13 +1457,17 @@ class ChatViewModel @Inject constructor(
             rawText = rawText,
             stopTokens = stopTokens
         )
-        if (sanitized.isNotBlank()) return sanitized
+        // Strip any remaining XML-like tags from final saved text too
+        if (sanitized.isNotBlank())
+            return com.localmind.app.ui.components.stripXmlLikeTags(sanitized).trim()
 
         val stripped = promptSanitizationUseCase.stripStreamingTags(rawText).trim()
-        if (stripped.isNotBlank()) return stripped
+        if (stripped.isNotBlank())
+            return com.localmind.app.ui.components.stripXmlLikeTags(stripped).trim()
 
         val (reasoning, main) = splitThinkingContent(rawText)
-        if (main.isNotBlank()) return main.trim()
+        if (main.isNotBlank())
+            return com.localmind.app.ui.components.stripXmlLikeTags(main).trim()
         if (reasoning.isNotBlank()) return reasoning.trim()
 
         return ""
