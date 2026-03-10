@@ -28,7 +28,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
@@ -305,6 +307,11 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(240.dp)
+                    .clip(CircleShape)
+            ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
                     .graphicsLayer {
                         // 3D rotation for depth effect
                         rotationY = rotY * iconScale
@@ -349,7 +356,8 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     drawRect(brush = shimmerBrush)
                 }
-            }
+            } // inner Box
+            } // outer clip Box
 
             // App title — slides up and fades in after icon
             Text(
