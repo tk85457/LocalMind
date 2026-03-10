@@ -19,7 +19,7 @@ class SettingsRepository @Inject constructor(
 ) {
     companion object {
         // ── Context Init Params (PocketPal contextInitParamsVersions.ts v2.1) ──
-        const val DEFAULT_CONTEXT_SIZE = 2048           // PocketPal: n_ctx = 2048
+        const val DEFAULT_CONTEXT_SIZE = 2048           // Fixed default: 2048
         const val DEFAULT_BATCH_SIZE = 512              // PocketPal: n_batch = 512 (was 1024)
         const val DEFAULT_PHYSICAL_BATCH_SIZE = 512     // PocketPal: n_ubatch = 512
         const val DEFAULT_GPU_LAYERS = 99               // PocketPal: n_gpu_layers = 99 (all layers, auto) (was 0)

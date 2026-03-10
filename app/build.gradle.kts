@@ -13,8 +13,8 @@ android {
         applicationId = "com.localmind.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 1       // VERSION: manually change karo jab update karna ho
+        versionName = "1.0.0" // VERSION: manually change karo jab update karna ho
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

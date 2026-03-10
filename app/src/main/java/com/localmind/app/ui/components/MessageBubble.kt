@@ -102,7 +102,7 @@ fun MessageBubble(
     ) {
         // Role label — small muted text above message
         Text(
-            text = if (isUser) "YOU" else "AI",
+            text = if (isUser) "YOU" else "LOCAL MIND AI",
             style = MaterialTheme.typography.labelSmall.copy(
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,

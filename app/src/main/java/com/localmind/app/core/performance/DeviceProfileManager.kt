@@ -76,12 +76,7 @@ class DeviceProfileManager @Inject constructor(
         val totalRamGb = ((memInfo.totalMem + (BYTES_IN_GB - 1)) / BYTES_IN_GB).toInt()
         val cpuCores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
 
-        val recommendedContextSize = when {
-            totalRamGb <= 4 -> 2048
-            totalRamGb <= 6 -> 4096
-            totalRamGb <= 8 -> 8192
-            else -> 16384
-        }
+        val recommendedContextSize = 2480 // Fixed: always 2480 regardless of RAM
 
         // POCKETPAL FIX: Thread count = 80% of cores (PocketPal exact formula).
         // PocketPal: nThreads = Math.floor(numCpus * 0.8) for >4 core devices.

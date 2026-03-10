@@ -91,19 +91,19 @@ class HuggingFaceRepository @Inject constructor(
 
             // -------- Qwen --------
             HuggingFaceModelInfo(
-                id = "Qwen/Qwen2.5-1.5B-Instruct-GGUF|qwen2.5-1.5b-instruct-q8_0.gguf",
-                name = "Qwen2.5-1.5B-Instruct (Q8_0)",
-                repoId = "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
-                author = "Alibaba",
-                description = "Alibaba's compact 1.5B multilingual model. Fast and capable for instructions and roleplay.",
-                parameterCount = "1.8B",
-                sizeGb = 1.76,  // 1,894,532,128 bytes = 1.76 GB
+                id = "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF|DeepSeek-R1-Distill-Qwen-1.5B-Q8_0.gguf",
+                name = "DeepSeek-R1-Distill 1.5B (Q8_0)",
+                repoId = "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF",
+                author = "DeepSeek",
+                description = "DeepSeek R1 reasoning model distilled to 1.5B. Exceptional step-by-step reasoning and math at tiny size.",
+                parameterCount = "1.5B",
+                sizeGb = 1.65,  // ~1,773,000,000 bytes = 1.65 GB
                 quantization = "Q8_0",
-                ggufFileName = "qwen2.5-1.5b-instruct-q8_0.gguf",
-                downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q8_0.gguf",
+                ggufFileName = "DeepSeek-R1-Distill-Qwen-1.5B-Q8_0.gguf",
+                downloadUrl = "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q8_0.gguf",
                 category = ModelCategory.SMALL,
                 minRamGb = 4,
-                tags = listOf("alibaba", "qwen", "multilingual", "instructions")
+                tags = listOf("deepseek", "reasoning", "math", "r1", "distill")
             ),
 
             HuggingFaceModelInfo(

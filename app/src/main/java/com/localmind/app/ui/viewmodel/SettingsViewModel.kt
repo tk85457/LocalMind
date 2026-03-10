@@ -280,7 +280,7 @@ class SettingsViewModel @Inject constructor(
             if (onboarded) return@launch
 
             val profile = deviceProfileManager.currentProfile()
-            val targetContext = profile.recommendedContextSize
+            val targetContext = 2048 // Fixed: always 2048, not RAM-based
             val targetThreads = profile.recommendedThreadCount
             val targetMaxTokens = min(
                 profile.recommendedMaxTokens,
@@ -323,7 +323,8 @@ class SettingsViewModel @Inject constructor(
             val currentThreads = repository.threadCount.first()
             val currentMaxTokens = repository.maxTokens.first()
             val currentTopK = repository.topK.first()
-            val targetContextDefault = profile.recommendedContextSize
+            // Context size: always use 2480 as default, never RAM-based override
+            val targetContextDefault = 2048
             val targetMaxTokensDefault = min(
                 profile.recommendedMaxTokens,
                 SettingsRepository.DEFAULT_MAX_TOKENS

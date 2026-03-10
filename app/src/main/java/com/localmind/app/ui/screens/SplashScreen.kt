@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.localmind.app.R
 import com.localmind.app.ui.theme.NeonPrimary
 import com.localmind.app.ui.theme.NeonPrimaryVariant
+import com.localmind.app.ui.theme.NeonText
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
@@ -355,7 +356,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                 text = "LocalMind",
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = NeonText,
                 letterSpacing = 1.5.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier

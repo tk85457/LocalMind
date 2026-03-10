@@ -42,6 +42,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -301,7 +304,10 @@ fun ChatScreen(
     // Yahan sirf keyboard open hone par scroll karo (IME aane par newest content dikhao).
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     androidx.compose.runtime.LaunchedEffect(imeBottom) {
-        if (imeBottom > 0 && listState.firstVisibleItemIndex == 0) {
+        // STOP FIX: sirf tab scroll karo jab keyboard actually khula ho (imeBottom > 100px)
+        // aur generation chal rahi ho. Stop press hone par layout change se imeBottom
+        // recompute hota tha aur ye fire ho jaata tha — input ke paas jarring scroll.
+        if (imeBottom > 100 && state.isGenerating && listState.firstVisibleItemIndex == 0) {
             listState.animateScrollToItem(0)
         }
     }
@@ -1222,18 +1228,22 @@ fun PersonaPage(
     onSelect: (com.localmind.app.domain.model.Persona) -> Unit,
     onManage: () -> Unit
 ) {
-    Column {
-        LazyRow(
+    Column(modifier = Modifier.fillMaxSize()) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .weight(1f)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 8.dp)
         ) {
             items(personas, key = { it.id }) { p ->
                 PersonaCard(
                     persona = p,
                     isSelected = selectedPersona?.id == p.id,
-                    onSelect = { onSelect(p) }
+                    onSelect = { onSelect(p) }  // turant activate
                 )
             }
         }
@@ -1449,7 +1459,7 @@ fun PromptLibraryBottomSheet(
                                 Text(
                                     prompt.title,
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = Color.White,
+                                    color = NeonText,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -1545,9 +1555,11 @@ fun ExportFormatDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Export Chat", color = Color.White) },
+        title = { Text("Export Chat", color = NeonText) },
         text = { Text("Choose export format:", color = NeonTextSecondary) },
         containerColor = NeonSurface,
+        titleContentColor = NeonText,
+        textContentColor = NeonTextSecondary,
         confirmButton = {
             Column(
                 modifier = androidx.compose.ui.Modifier
@@ -1561,23 +1573,25 @@ fun ExportFormatDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = NeonPrimary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Markdown (.md)", color = Color.Black)
+                    Text("Markdown (.md)", color = Color.White)
                 }
                 Button(
                     onClick = { onFormatSelected("json") },
                     modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonElevated),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonPrimary.copy(alpha = 0.15f)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("JSON (.json)", color = Color.White)
+                    Text("JSON (.json)", color = NeonPrimary)
+                }
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                ) {
+                    Text("Cancel", color = NeonPrimary)
                 }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = NeonPrimary)
-            }
-        }
+        dismissButton = null
     )
 }
 

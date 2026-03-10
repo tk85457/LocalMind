@@ -106,11 +106,20 @@ class TemplateResolver @Inject constructor(
 
         // PERF: System prompt priority: explicit (persona) > model recommended > empty.
         // Koi hardcoded fallback nahi — extra tokens = slow TTFT.
-        val resolvedSystemPrompt = explicitSystemPrompt
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
-            ?: model?.recommendedSystemPrompt?.trim()?.takeIf { it.isNotEmpty() }
-            ?: ""
+        // DEEPSEEK R1 FIX: R1 distill models (especially 1.5B) system prompt se
+        // confuse hoke garbage (@@@@@ etc.) generate karte hain.
+        // Known issue: https://github.com/ggml-org/llama.cpp/issues/10781
+        // Fix: DeepSeek R1 ke liye system prompt force-empty karo.
+        val isDeepSeekR1 = spec.id == TemplateCatalog.TEMPLATE_DEEPSEEK_R1
+        val resolvedSystemPrompt = if (isDeepSeekR1) {
+            "" // DeepSeek R1: no system prompt — model expects empty system
+        } else {
+            explicitSystemPrompt
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?: model?.recommendedSystemPrompt?.trim()?.takeIf { it.isNotEmpty() }
+                ?: ""
+        }
 
         return ResolvedTemplateProfile(
             templateId = spec.id,

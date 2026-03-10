@@ -86,7 +86,8 @@ object TemplateCatalog {
             id = TEMPLATE_DEEPSEEK_R1,
             family = TemplateFamily.DEEPSEEK,
             defaultSystemPrompt = "", // PERF: no default — persona se aata hai
-            defaultStopTokens = listOf("<|im_end|>", "</s>", "<|end_of_sentence|>")
+            // DeepSeek R1 Qwen-based: Qwen2 tokenizer EOS tokens
+            defaultStopTokens = listOf("<|im_end|>", "<|endoftext|>", "</s>")
         ),
         // POCKETPAL FIX: QwQ reasoning model support
         TEMPLATE_QWQ to TemplateSpec(

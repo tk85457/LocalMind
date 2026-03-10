@@ -1117,6 +1117,11 @@ class LLMEngine @Inject constructor(
                         private val tokenBuffer = StringBuilder()
                         // Pre-compiled once per generation (negligible cost)
                         private val IGNORED_TAG_PATTERN = Regex("<\\|[a-zA-Z0-9_]+\\|>")
+                        // DeepSeek R1 reasoning filter: <think>...</think> blocks hide karo
+                        private var insideThinkBlock = false
+                        private val thinkOpenTag = "<think>"
+                        private val thinkCloseTag = "</think>"
+                        private val thinkTagBuffer = StringBuilder()
 
                         private fun processCleanText(text: String) {
                             if (stopTokens.isEmpty()) {
@@ -1162,9 +1167,42 @@ class LLMEngine @Inject constructor(
                                 Log.w(TAG, "High memory pressure detected during generation; continuing stream")
                             }
 
+                            // DEEPSEEK R1 FIX: <think>...</think> blocks filter karo
+                            // Reasoning models (DeepSeek R1, QwQ) pehle reasoning generate karte hain
+                            // User ko sirf actual answer dikhao, garbage reasoning nahi
+                            thinkTagBuffer.append(token)
+                            val tagBufStr = thinkTagBuffer.toString()
+                            if (!insideThinkBlock && tagBufStr.contains(thinkOpenTag)) {
+                                insideThinkBlock = true
+                                // <think> se pehle koi content tha toh emit karo
+                                val beforeThink = tagBufStr.substringBefore(thinkOpenTag)
+                                thinkTagBuffer.clear()
+                                if (beforeThink.isNotBlank()) tokenBuffer.append(beforeThink)
+                                // think block ke andar hu — return, kuch emit mat karo
+                                return
+                            }
+                            if (insideThinkBlock) {
+                                if (tagBufStr.contains(thinkCloseTag)) {
+                                    insideThinkBlock = false
+                                    // </think> ke baad koi content
+                                    val afterClose = tagBufStr.substringAfter(thinkCloseTag).trimStart('\n')
+                                    thinkTagBuffer.clear()
+                                    if (afterClose.isNotBlank()) tokenBuffer.append(afterClose)
+                                } else {
+                                    // Abhi bhi think block mein — buffer check karo taaki token boundary na miss ho
+                                    if (tagBufStr.length > 64) thinkTagBuffer.clear() // garbage flush
+                                    return
+                                }
+                            } else {
+                                // Normal token: thinkTagBuffer ka content tokenBuffer mein move karo
+                                if (thinkTagBuffer.isNotEmpty()) {
+                                    tokenBuffer.append(thinkTagBuffer)
+                                    thinkTagBuffer.clear()
+                                }
+                            }
+
                             // STABILITY: Append to buffer first to check for stop tokens
                             // including those within tags like <|eot_id|>
-                            tokenBuffer.append(token)
                             val bufferStr = tokenBuffer.toString()
 
                             // Check for stop tokens in the raw buffer (before tag stripping)
@@ -1208,6 +1246,11 @@ class LLMEngine @Inject constructor(
                         }
 
                         override fun onComplete() {
+                            // Think block ke baadu koi leftover text flush karo
+                            if (!insideThinkBlock && thinkTagBuffer.isNotEmpty()) {
+                                tokenBuffer.append(thinkTagBuffer)
+                                thinkTagBuffer.clear()
+                            }
                             var remaining = tokenBuffer.toString()
                             remaining = IGNORED_TAG_PATTERN.replace(remaining, "")
 

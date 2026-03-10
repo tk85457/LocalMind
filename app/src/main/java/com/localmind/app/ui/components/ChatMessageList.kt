@@ -94,9 +94,11 @@ fun ChatMessageList(
             listState.animateScrollToItem(0)
         }
     }
-    // Message add hone par bhi scroll karo (response complete ke baad)
+    // Message add hone par scroll karo — SIRF jab generation chal rahi ho.
+    // Agar isGenerating false hai (stop press hua) toh scroll mat karo —
+    // warna streaming bubble gayab hone ke baad jarring jump hota hai.
     androidx.compose.runtime.LaunchedEffect(messages.size) {
-        if (atLatest && totalItems > 0) {
+        if (isGenerating && atLatest && totalItems > 0) {
             listState.animateScrollToItem(0)
         }
     }

@@ -69,15 +69,11 @@ fun MemorySettingsSection(
                     if (size < 512) return@OutlinedTextField
                     onContextSizeChange(size)
 
-                    val recommended = com.localmind.app.core.Constants.MAX_CONTEXT_SIZE
+                    val recommended = 2480
                     val totalRam = hardwareStats?.totalRamGb ?: 4.0
                     val warningText = when {
-                        totalRam <= 4.1 && size > 2048 ->
-                            "Limited RAM (${String.format("%.1f", totalRam)} GB). Context $size may cause crashes. Recommended max: $recommended."
-                        totalRam <= 6.1 && size > 3072 ->
-                            "High context ($size) may slow generation on ${String.format("%.1f", totalRam)} GB RAM. Recommended max: $recommended."
                         size > recommended ->
-                            "Context $size exceeds recommended max ($recommended). Stability not guaranteed."
+                            "Context $size exceeds recommended ($recommended). Stability not guaranteed."
                         else -> null
                     }
                     if (warningText != null) {
@@ -108,7 +104,7 @@ fun MemorySettingsSection(
                 })
             )
             Text(
-                "${stringResource(R.string.settings_requires_reload)} • Max: ${com.localmind.app.core.Constants.MAX_CONTEXT_SIZE} tokens",
+                "${stringResource(R.string.settings_requires_reload)} • Recommended: 2480 tokens",
                 style = MaterialTheme.typography.bodySmall,
                 color = NeonTextSecondary,
                 modifier = Modifier.padding(top = 4.dp)
