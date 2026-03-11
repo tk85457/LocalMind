@@ -114,10 +114,11 @@ class ModelManagerViewModel @Inject constructor(
         eos: Boolean,
         addGenPrompt: Boolean,
         systemPrompt: String,
-        stopWords: List<String>
+        stopWords: List<String>,
+        templateId: String = ""
     ) {
         viewModelScope.launch {
-            modelRepository.updateModelSettings(modelId, bos, eos, addGenPrompt, systemPrompt, stopWords)
+            modelRepository.updateModelSettings(modelId, bos, eos, addGenPrompt, systemPrompt, stopWords, templateId)
         }
     }
 }

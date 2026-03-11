@@ -114,6 +114,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
@@ -178,7 +180,9 @@ fun ChatScreen(
     val streamingText by viewModel.streamingText.collectAsStateWithLifecycle()
     val streamingReasoningText by viewModel.streamingReasoningText.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
-    var inputText by remember { mutableStateOf("") }
+    // TextFieldValue: cursor position + scroll position dono control hoti hai
+    // String se TextFieldValue: STT text aate hi cursor end mein ja sakta hai
+    var inputText by remember { mutableStateOf(TextFieldValue("")) }
     var searchQuery by remember { mutableStateOf("") }
     var showSearch by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -201,12 +205,16 @@ fun ChatScreen(
         STTHelper(
             context = context,
             onResults = { result ->
-                inputText = (if (stableInputText.isBlank()) "" else "$stableInputText ") + result
+                val newText = (if (stableInputText.isBlank()) "" else "$stableInputText ") + result
+                // Cursor end mein set karo — user ko dikhe ki text aa gaya
+                inputText = TextFieldValue(text = newText, selection = TextRange(newText.length))
                 isListening = false
             },
             onPartialResults = { partial ->
                 if (partial.isNotBlank()) {
-                    inputText = (if (stableInputText.isBlank()) "" else "$stableInputText ") + partial
+                    val newText = (if (stableInputText.isBlank()) "" else "$stableInputText ") + partial
+                    // Partial results bhi cursor end mein — real-time scroll
+                    inputText = TextFieldValue(text = newText, selection = TextRange(newText.length))
                 }
             },
             onError = { error ->
@@ -228,7 +236,7 @@ fun ChatScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            stableInputText = inputText
+            stableInputText = inputText.text
             isListening = true
             sttHelper.startListening()
         } else {
@@ -619,7 +627,7 @@ fun ChatScreen(
                         personaName = state.selectedPersona?.name ?: "Assistant",
                         personaIcon = state.selectedPersona?.icon ?: "🤖",
                         onSuggestionClick = { suggestion ->
-                            inputText = suggestion
+                            inputText = TextFieldValue(text = suggestion, selection = TextRange(suggestion.length))
                         }
                     )
                 } else {
@@ -656,7 +664,7 @@ fun ChatScreen(
                     onEdit = { messageId ->
                         // PocketPal-style edit: message ID se content lo, pending edit set karo
                         val content = viewModel.startEditMessage(messageId)
-                        if (content != null) inputText = content
+                        if (content != null) inputText = TextFieldValue(text = content, selection = TextRange(content.length))
                     },
                     onDelete = { viewModel.deleteMessage(it) },
                     onShare = { message ->
@@ -667,11 +675,25 @@ fun ChatScreen(
                         context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Message"))
                     },
                     onCopy = { content ->
+                        // SECURITY FIX: Clipboard auto-clear after 2 minutes
+                        // Prevents sensitive AI chat content from persisting in clipboard
+                        // OWASP MSTG-STORAGE-10
                         val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
                                 as android.content.ClipboardManager
                         val clipData = android.content.ClipData.newPlainText("Message", content)
                         clipboardManager.setPrimaryClip(clipData)
                         android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                        // Auto-clear clipboard after 2 minutes
+                        kotlinx.coroutines.MainScope().launch {
+                            kotlinx.coroutines.delay(120_000L)
+                            val current = clipboardManager.primaryClip
+                            val currentText = current?.getItemAt(0)?.text?.toString()
+                            if (currentText == content) {
+                                clipboardManager.setPrimaryClip(
+                                    android.content.ClipData.newPlainText("", "")
+                                )
+                            }
+                        }
                     },
                 )
                 } // end else (messages not empty)
@@ -773,7 +795,7 @@ fun ChatScreen(
                         prompts = state.promptTemplates,
                         onDismiss = { showPromptLibrary = false },
                         onSelect = { template ->
-                            inputText = template.content
+                            inputText = TextFieldValue(text = template.content, selection = TextRange(template.content.length))
                             showPromptLibrary = false
                         },
                         onManage = {
@@ -826,7 +848,7 @@ fun ChatScreen(
                     },
                     onCancelEdit = {
                         viewModel.cancelEdit()
-                        inputText = ""
+                        inputText = TextFieldValue("")
                     },
                     isListening = isListening,
                     onMicClick = {
@@ -839,7 +861,7 @@ fun ChatScreen(
                                 return@ChatInputBar
                             }
                             if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                stableInputText = inputText
+                                stableInputText = inputText.text
                                 isListening = true
                                 sttHelper.startListening()
                             } else {
@@ -851,17 +873,17 @@ fun ChatScreen(
                         attachFileLauncher.launch(arrayOf("image/*", "application/pdf", "text/plain"))
                     },
                     onSendClick = {
-                        val canSend = inputText.isNotBlank() || state.attachments.isNotEmpty()
+                        val canSend = inputText.text.isNotBlank() || state.attachments.isNotEmpty()
                         if (canSend && !state.isGenerating) {
-                            viewModel.sendMessage(inputText.trim(), context)
-                            inputText = ""
+                            viewModel.sendMessage(inputText.text.trim(), context)
+                            inputText = TextFieldValue("")
                         } else if (state.isGenerating) {
                             viewModel.stopGeneration()
                         }
                     },
                     isGenerating = state.isGenerating,
                     isLoadingModel = state.isLoadingModel,
-                    canSend = inputText.isNotBlank() || state.attachments.isNotEmpty(),
+                    canSend = inputText.text.isNotBlank() || state.attachments.isNotEmpty(),
                     activeModel = state.activeModel,
                     onModelClick = { showBottomSheet = true }
                 )

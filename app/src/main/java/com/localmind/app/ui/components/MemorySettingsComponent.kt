@@ -69,7 +69,7 @@ fun MemorySettingsSection(
                     if (size < 512) return@OutlinedTextField
                     onContextSizeChange(size)
 
-                    val recommended = 2480
+                    val recommended = 2048
                     val totalRam = hardwareStats?.totalRamGb ?: 4.0
                     val warningText = when {
                         size > recommended ->
@@ -104,7 +104,7 @@ fun MemorySettingsSection(
                 })
             )
             Text(
-                "${stringResource(R.string.settings_requires_reload)} • Recommended: 2480 tokens",
+                "${stringResource(R.string.settings_requires_reload)} • Recommended: 2048 tokens",
                 style = MaterialTheme.typography.bodySmall,
                 color = NeonTextSecondary,
                 modifier = Modifier.padding(top = 4.dp)

@@ -1,5 +1,29 @@
 # Add project specific ProGuard rules here.
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECURITY: ProGuard hardening rules (OWASP MASVS MSTG-RESILIENCE-9)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Remove all debug log calls in release (MSTG-RESILIENCE-2)
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+    public static int w(...);
+    public static int e(...);
+    public static int wtf(...);
+    public static java.lang.String getStackTraceString(java.lang.Throwable);
+}
+
+# Keep Android Keystore and Crypto classes
+-keep class android.security.keystore.** { *; }
+-keep class javax.crypto.** { *; }
+-keep class java.security.** { *; }
+-keep class androidx.security.crypto.** { *; }
+
+# Keep SecureStorageManager
+-keep class com.localmind.app.core.security.SecureStorageManager { *; }
+
 # Keep native methods
 -keepclasseswithmembernames class * {
     native <methods>;

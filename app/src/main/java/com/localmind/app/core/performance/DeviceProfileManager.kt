@@ -76,7 +76,7 @@ class DeviceProfileManager @Inject constructor(
         val totalRamGb = ((memInfo.totalMem + (BYTES_IN_GB - 1)) / BYTES_IN_GB).toInt()
         val cpuCores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
 
-        val recommendedContextSize = 2480 // Fixed: always 2480 regardless of RAM
+        val recommendedContextSize = 2048 // Fixed: always 2048 regardless of RAM
 
         // POCKETPAL FIX: Thread count = 80% of cores (PocketPal exact formula).
         // PocketPal: nThreads = Math.floor(numCpus * 0.8) for >4 core devices.
@@ -387,7 +387,7 @@ class DeviceProfileManager @Inject constructor(
     private fun maxContextForRam(totalRamGb: Int): Int {
         // User settings respect karo — no RAM-based override.
         // totalRamGb is logged for diagnostics only.
-        android.util.Log.d("DeviceProfile", "maxContextForRam: totalRamGb=$totalRamGb, returning uncapped")
+        if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.d("DeviceProfile", "maxContextForRam: totalRamGb=$totalRamGb, returning uncapped")
         return 131072
     }
 

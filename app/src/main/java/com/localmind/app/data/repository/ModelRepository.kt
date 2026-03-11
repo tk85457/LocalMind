@@ -1,4 +1,4 @@
-package com.localmind.app.data.repository
+﻿package com.localmind.app.data.repository
 
 import com.localmind.app.core.storage.InternalModelStorageManager
 import com.localmind.app.data.local.dao.ModelDao
@@ -110,7 +110,8 @@ class ModelRepository @Inject constructor(
         eos: Boolean,
         addGenPrompt: Boolean,
         systemPrompt: String,
-        stopWords: List<String>
+        stopWords: List<String>,
+        templateId: String = ""
     ) {
         val entity = modelDao.getModelById(modelId) ?: return
         val updated = entity.copy(
@@ -118,7 +119,9 @@ class ModelRepository @Inject constructor(
             bosEnabled = bos,
             eosEnabled = eos,
             addGenPrompt = addGenPrompt,
-            stopTokensJson = JSONArray(stopWords).toString()
+            stopTokensJson = JSONArray(stopWords).toString(),
+            // Only update templateId if a valid non-blank value was passed
+            templateId = templateId.ifBlank { entity.templateId }
         )
         modelDao.updateModel(updated)
     }
@@ -158,7 +161,7 @@ class ModelRepository @Inject constructor(
                     filePath = storedFile.absolutePath,
                     sizeBytes = storedFile.length(),
                     quantization = inferredQuantization,
-                    contextLength = 4096, // Safer default — most modern models support 4K+
+                    contextLength = 4096, // Safer default â€” most modern models support 4K+
                     parameterCount = "Unknown",
                     installDate = System.currentTimeMillis(),
                     isActive = true,
@@ -185,7 +188,7 @@ class ModelRepository @Inject constructor(
 
                 Result.success(entity.toDomain())
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.w("ModelRepository", "error", e)
                 Result.failure(e)
             }
         }
@@ -222,3 +225,4 @@ class ModelRepository @Inject constructor(
         )
     }
 }
+

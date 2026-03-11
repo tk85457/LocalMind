@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -27,6 +26,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.localmind.app.core.utils.SecureLogger
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
@@ -166,9 +166,10 @@ class DownloadModelWorker @AssistedInject constructor(
             )
             val elapsedMs = downloadOutcome.elapsedMs.coerceAtLeast(1L)
             val averageBps = (downloadOutcome.totalSizeBytes * 1000L) / elapsedMs
-            Log.i(
+            // SECURITY FIX: model name not logged in release — use SecureLogger
+            SecureLogger.i(
                 "LocalMind-Download",
-                "Completed model=$modelName size=${downloadOutcome.totalSizeBytes}B elapsedMs=$elapsedMs avgSpeed=${formatSpeed(averageBps)}"
+                "Download completed size=${downloadOutcome.totalSizeBytes}B elapsedMs=$elapsedMs avgSpeed=${formatSpeed(averageBps)}"
             )
 
 
@@ -191,7 +192,7 @@ class DownloadModelWorker @AssistedInject constructor(
             )
         } catch (e: java.io.IOException) {
             val retryTask = downloadTaskDao.getTaskById(taskId)
-            Log.w("LocalMind-Download", "Transient network error; scheduling retry for $modelName", e)
+            SecureLogger.w("LocalMind-Download", "Transient network error; scheduling retry", e)
             updateTaskState(
                 taskId = taskId,
                 modelId = repoId.ifBlank { modelName },
@@ -327,7 +328,7 @@ class DownloadModelWorker @AssistedInject constructor(
             if (resumeFromBytes > 0L) {
                 aggregateDownloadedBytes += resumeFromBytes
                 resumeCounted = true
-                Log.i("LocalMind-Download", "Resuming $partFileName from byte=$resumeFromBytes")
+                SecureLogger.i("LocalMind-Download", "Resuming download from byte=$resumeFromBytes")
             }
 
             val requestBuilder = Request.Builder().url(partUrl)
@@ -389,7 +390,7 @@ class DownloadModelWorker @AssistedInject constructor(
                     if (tempFile.exists()) {
                         tempFile.delete()
                     }
-                    Log.w("LocalMind-Download", "Server ignored Range for $partFileName; restarting shard")
+                    SecureLogger.w("LocalMind-Download", "Server ignored Range header; restarting shard")
                 }
 
                 val responseBytes = body.contentLength().coerceAtLeast(0L)

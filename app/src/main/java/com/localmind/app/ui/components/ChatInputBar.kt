@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,8 +26,10 @@ import com.localmind.app.ui.theme.*
 
 @Composable
 fun ChatInputBar(
-    inputText: String,
-    onInputTextChanged: (String) -> Unit,
+    // TextFieldValue: cursor position + scroll dono sahi kaam karte hain
+    // String use karne par STT text aane ke baad cursor beginning mein reh jaata tha
+    inputText: TextFieldValue,
+    onInputTextChanged: (TextFieldValue) -> Unit,
     isListening: Boolean,
     onMicClick: () -> Unit,
     onAttachClick: () -> Unit,
@@ -196,7 +199,9 @@ fun ChatInputBar(
                             }
                         }
 
-                        // Text input field
+                        // Text input field — TextFieldValue use karke cursor + scroll sahi kaam karta hai
+                        // Jab STT se text aata hai: TextRange(text.length) cursor end mein le jaata hai
+                        // Jyada text hone par field automatically scroll hoti hai cursor tak
                         OutlinedTextField(
                             value = inputText,
                             onValueChange = onInputTextChanged,
@@ -228,7 +233,7 @@ fun ChatInputBar(
                             ),
                             keyboardActions = KeyboardActions(
                                 onSend = {
-                                    if (!isGenerating && (inputText.isNotBlank())) {
+                                    if (!isGenerating && inputText.text.isNotBlank()) {
                                         onSendClick()
                                     }
                                 }
@@ -282,4 +287,3 @@ fun ChatInputBar(
         }
     }
 }
-

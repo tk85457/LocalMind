@@ -326,26 +326,41 @@ fun ModelManagerScreen(
         ModelSettingsDialog(
             model = model,
             onDismiss = { showSettingsDialog = null },
-            onSave = { bos, eos, addGen, system, stop ->
-                viewModel.updateModelSettings(model.id, bos, eos, addGen, system, stop)
+            onSave = { bos, eos, addGen, system, stop, templateId ->
+                viewModel.updateModelSettings(model.id, bos, eos, addGen, system, stop, templateId)
                 showSettingsDialog = null
             }
         )
     }
 }
 
-// Keep the existing settings dialog code below this.
+// Available templates for the template picker dropdown
+private val ALL_TEMPLATES = listOf(
+    "chatml_default" to "ChatML (Default)",
+    "llama3"         to "Llama 3",
+    "llama32"        to "Llama 3.2",
+    "phi3"           to "Phi-3",
+    "qwen2"          to "Qwen 2",
+    "qwen25"         to "Qwen 2.5",
+    "gemma"          to "Gemma",
+    "gemma2"         to "Gemma 2",
+    "deepseek_r1"    to "DeepSeek R1",
+    "qwq"            to "QwQ"
+)
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ModelSettingsDialog(
     model: Model,
     onDismiss: () -> Unit,
-    onSave: (bos: Boolean, eos: Boolean, addGenPrompt: Boolean, systemPrompt: String, stopWords: List<String>) -> Unit
+    onSave: (bos: Boolean, eos: Boolean, addGenPrompt: Boolean, systemPrompt: String, stopWords: List<String>, templateId: String) -> Unit
 ) {
     var bos by remember { mutableStateOf(model.bosEnabled) }
     var eos by remember { mutableStateOf(model.eosEnabled) }
     var addGenPrompt by remember { mutableStateOf(model.addGenPrompt) }
     var systemPrompt by remember { mutableStateOf(model.recommendedSystemPrompt ?: "") }
+    var selectedTemplateId by remember { mutableStateOf(model.templateId.ifBlank { "chatml_default" }) }
+    var showTemplatePicker by remember { mutableStateOf(false) }
     var stopWords by remember {
         mutableStateOf(
             runCatching {
@@ -438,26 +453,78 @@ fun ModelSettingsDialog(
                     }
 
                     item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Template: ", color = NeonTextSecondary, fontSize = 14.sp)
-                            Text(
-                                "{{- bos_token }}{{%- if",
-                                color = NeonTextExtraMuted,
-                                fontSize = 14.sp,
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                "Edit",
-                                color = NeonPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                modifier = Modifier.clickable { /* Edit template logic */ }.padding(8.dp)
-                            )
+                        Column {
+                            Text("Template", color = NeonTextSecondary, fontSize = 13.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            // Template picker — tap to open dropdown
+                            Surface(
+                                color = NeonElevated,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showTemplatePicker = !showTemplatePicker }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        ALL_TEMPLATES.firstOrNull { it.first == selectedTemplateId }?.second
+                                            ?: selectedTemplateId,
+                                        color = NeonText,
+                                        fontSize = 15.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(
+                                        if (showTemplatePicker) Icons.Default.KeyboardArrowUp
+                                        else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        tint = NeonPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            // Dropdown list
+                            if (showTemplatePicker) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Card(
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = NeonElevated),
+                                    border = BorderStroke(1.dp, NeonTextExtraMuted.copy(alpha = 0.2f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    ALL_TEMPLATES.forEach { (id, label) ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    selectedTemplateId = id
+                                                    showTemplatePicker = false
+                                                }
+                                                .background(
+                                                    if (id == selectedTemplateId)
+                                                        NeonPrimary.copy(alpha = 0.12f)
+                                                    else Color.Transparent
+                                                )
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (id == selectedTemplateId) {
+                                                Icon(
+                                                    Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = NeonPrimary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                            } else {
+                                                Spacer(modifier = Modifier.width(24.dp))
+                                            }
+                                            Text(label, color = NeonText, fontSize = 14.sp)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -537,11 +604,13 @@ fun ModelSettingsDialog(
                             eos = model.eosEnabled
                             addGenPrompt = model.addGenPrompt
                             systemPrompt = model.recommendedSystemPrompt ?: ""
+                            selectedTemplateId = model.templateId.ifBlank { "chatml_default" }
                             stopWords = runCatching {
                                 val array = org.json.JSONArray(model.stopTokensJson)
                                 List(array.length()) { i -> array.getString(i) }
                             }.getOrElse { listOf("<|eot_id|>") }
                             newStopWord = ""
+                            showTemplatePicker = false
                         }.padding(8.dp)
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -549,7 +618,7 @@ fun ModelSettingsDialog(
                             Text("Cancel", color = NeonTextSecondary)
                         }
                         Button(
-                            onClick = { onSave(bos, eos, addGenPrompt, systemPrompt, stopWords) },
+                            onClick = { onSave(bos, eos, addGenPrompt, systemPrompt, stopWords, selectedTemplateId) },
                             colors = ButtonDefaults.buttonColors(containerColor = NeonPrimary),
                             shape = RoundedCornerShape(16.dp),
                             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)

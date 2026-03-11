@@ -86,19 +86,39 @@ fun ChatMessageList(
         derivedStateOf { listState.layoutInfo.totalItemsCount }
     }
 
-    // SCROLL FIX: Jab bhi isGenerating true ho (naya message send hua)
-    // hamesha item(0) pe scroll karo — chahe user kahin bhi ho.
-    // reverseLayout=true mein item(0) = latest content (streaming bubble ya newest message).
+    // SCROLL FIX: Jab generation start ho toh latest pe scroll karo.
+    // Jab generation STOP ho toh streaming bubble hata aur layout shift fix karo.
+    //
+    // BUG ROOT CAUSE:
+    // reverseLayout=true mein streaming_response item index=0 pe hota hai (screen ke bottom pe).
+    // Jab stop press hota hai:
+    //   1. streamingResponse = null → streaming bubble LazyColumn se hata
+    //   2. Layout recalculate hoti hai, scroll anchor shift ho jaata hai
+    //   3. Yahi "jump" visible hota hai
+    // FIX: Stop hone ke baad 50ms delay se scrollToItem(0) instantly call karo —
+    // sirf tab jab user bottom ke paas tha (firstVisibleItemIndex <= 2).
+    // Instant scroll (no animation) koi jarring effect nahi deta kyunki position pehle se wahi hai.
     androidx.compose.runtime.LaunchedEffect(isGenerating) {
-        if (isGenerating && totalItems > 0) {
-            listState.animateScrollToItem(0)
+        if (isGenerating) {
+            // Generation shuru hui — latest pe jaao
+            if (totalItems > 0) listState.animateScrollToItem(0)
+        } else {
+            // Generation ruk gayi — streaming items hatenge, layout shift hogi
+            // 50ms wait karo taaki Compose streaming bubble remove kar sake
+            kotlinx.coroutines.delay(50)
+            // Sirf tab correct karo jab user bottom ke paas tha
+            // (agar user upar scroll karke pura messages dekh raha tha toh disturb mat karo)
+            if (listState.firstVisibleItemIndex <= 2) {
+                listState.scrollToItem(0) // Instant snap — no animation, no jump
+            }
         }
     }
-    // Message add hone par scroll karo — SIRF jab generation chal rahi ho.
-    // Agar isGenerating false hai (stop press hua) toh scroll mat karo —
-    // warna streaming bubble gayab hone ke baad jarring jump hota hai.
+
+    // Message add hone par scroll karo — SIRF jab token streaming active ho.
+    // "isGenerating=true" kaafi nahi — stop press ke baad bhi briefly true hota hai
+    // (partial response save hone tak). streamingResponse check se race condition fix hoti hai.
     androidx.compose.runtime.LaunchedEffect(messages.size) {
-        if (isGenerating && atLatest && totalItems > 0) {
+        if (isGenerating && !streamingResponse.isNullOrEmpty() && atLatest && totalItems > 0) {
             listState.animateScrollToItem(0)
         }
     }

@@ -1,4 +1,4 @@
-package com.localmind.app.ui.viewmodel
+﻿package com.localmind.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -71,7 +71,7 @@ data class SettingsState(
     val useMmap: Boolean = SettingsRepository.DEFAULT_USE_MMAP,
     val keyCacheType: String = SettingsRepository.DEFAULT_KEY_CACHE_TYPE,
     val valueCacheType: String = SettingsRepository.DEFAULT_VALUE_CACHE_TYPE,
-    // PocketPal Completion Params — full parity
+    // PocketPal Completion Params â€” full parity
     val minP: Float = SettingsRepository.DEFAULT_MIN_P,
     val seed: Int = SettingsRepository.DEFAULT_SEED,
     val xtcThreshold: Float = SettingsRepository.DEFAULT_XTC_THRESHOLD,
@@ -117,7 +117,7 @@ class SettingsViewModel @Inject constructor(
     private val _importExportStatus = MutableStateFlow<UiState<String>>(UiState.Idle)
     val importExportStatus = _importExportStatus.asStateFlow()
 
-    // Kotlin combine() max 16 flows — isliye 2 combine chains use karo + merge
+    // Kotlin combine() max 16 flows â€” isliye 2 combine chains use karo + merge
     private val _settingsPart1 = combine(
         repository.temperature,       // 0
         repository.topP,               // 1
@@ -252,7 +252,7 @@ class SettingsViewModel @Inject constructor(
     init {
         // FIX: Only call ONE initialization function. applyMaximumSpeedCaps() and
         // applyDeviceSafeDefaults() had overlapping logic writing the same DataStore
-        // keys simultaneously from two separate coroutines — potential DataStore write
+        // keys simultaneously from two separate coroutines â€” potential DataStore write
         // conflict and wasted double-disk-IO. Merged into a single call.
         applyDeviceSafeDefaults()
         observeAutoDelete()
@@ -382,7 +382,7 @@ class SettingsViewModel @Inject constructor(
                 }
                 kotlinx.coroutines.delay(500)
             } catch (e: Throwable) {
-                android.util.Log.e("SettingsViewModel", "Error clearing cache", e)
+                if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.e("SettingsViewModel", "Error clearing cache", e)
             } finally {
                 // Ensure the flag is reset even on failure or cancellation
                 withContext(kotlinx.coroutines.NonCancellable) {
@@ -423,7 +423,7 @@ class SettingsViewModel @Inject constructor(
                 }
 
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.w("SettingsViewModel", "error", e)
             }
         }
     }
@@ -480,7 +480,7 @@ class SettingsViewModel @Inject constructor(
                 _importExportStatus.value = UiState.Success("Chats exported successfully")
             } catch (e: Exception) {
                 _importExportStatus.value = UiState.Error("Export failed: ${e.message}")
-                e.printStackTrace()
+                if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.w("SettingsViewModel", "error", e)
             } finally {
                 _isExporting.value = false
             }
@@ -549,7 +549,7 @@ class SettingsViewModel @Inject constructor(
                 _importExportStatus.value = UiState.Success("${conversationsToInsert.size} chats imported successfully")
             } catch (e: Exception) {
                 _importExportStatus.value = UiState.Error("Import failed: ${e.message}")
-                e.printStackTrace()
+                if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.w("SettingsViewModel", "error", e)
             } finally {
                 _isImporting.value = false
             }
@@ -721,7 +721,7 @@ class SettingsViewModel @Inject constructor(
         repository.updateSeed(value)
     }
 
-    // PocketPal full parity — new completion params
+    // PocketPal full parity â€” new completion params
     fun updateXtcThreshold(value: Float) = viewModelScope.launch { repository.updateXtcThreshold(value) }
     fun updateXtcProbability(value: Float) = viewModelScope.launch { repository.updateXtcProbability(value) }
     fun updateTypicalP(value: Float) = viewModelScope.launch { repository.updateTypicalP(value) }
@@ -782,3 +782,4 @@ class SettingsViewModel @Inject constructor(
         }
     }
 }
+

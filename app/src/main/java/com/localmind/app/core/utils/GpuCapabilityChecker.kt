@@ -4,6 +4,7 @@ import android.content.Context
 import android.opengl.EGL14
 import android.opengl.EGLConfig
 import android.util.Log
+import com.localmind.app.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -58,7 +59,7 @@ class GpuCapabilityChecker @Inject constructor(
             gpuRendererString = rendererString
         )
 
-        Log.i(TAG, "GPU capability check: ${capability.toLogString()}")
+        if (BuildConfig.DEBUG) Log.i(TAG, "GPU capability check: ${capability.toLogString()}")
         return capability
     }
 
@@ -71,14 +72,14 @@ class GpuCapabilityChecker @Inject constructor(
             // EGL display initialize karo
             val display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
             if (display == EGL14.EGL_NO_DISPLAY) {
-                Log.w(TAG, "EGL: No display available")
+                if (BuildConfig.DEBUG) Log.w(TAG, "EGL: No display available")
                 return "unknown"
             }
 
             val versionMajor = IntArray(1)
             val versionMinor = IntArray(1)
             if (!EGL14.eglInitialize(display, versionMajor, 0, versionMinor, 0)) {
-                Log.w(TAG, "EGL: Initialize failed")
+                if (BuildConfig.DEBUG) Log.w(TAG, "EGL: Initialize failed")
                 return "unknown"
             }
 
@@ -92,7 +93,7 @@ class GpuCapabilityChecker @Inject constructor(
             val numConfigs = IntArray(1)
             if (!EGL14.eglChooseConfig(display, configAttribs, 0, configs, 0, 1, numConfigs, 0)
                 || numConfigs[0] == 0) {
-                Log.w(TAG, "EGL: No configs available")
+                if (BuildConfig.DEBUG) Log.w(TAG, "EGL: No configs available")
                 EGL14.eglTerminate(display)
                 return "unknown"
             }
@@ -101,7 +102,7 @@ class GpuCapabilityChecker @Inject constructor(
             val contextAttribs = intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL14.EGL_NONE)
             val eglContext = EGL14.eglCreateContext(display, configs[0]!!, EGL14.EGL_NO_CONTEXT, contextAttribs, 0)
             if (eglContext == EGL14.EGL_NO_CONTEXT) {
-                Log.w(TAG, "EGL: Context creation failed")
+                if (BuildConfig.DEBUG) Log.w(TAG, "EGL: Context creation failed")
                 EGL14.eglTerminate(display)
                 return "unknown"
             }
@@ -121,10 +122,10 @@ class GpuCapabilityChecker @Inject constructor(
             EGL14.eglDestroyContext(display, eglContext)
             EGL14.eglTerminate(display)
 
-            Log.i(TAG, "GL_RENDERER = $renderer")
+            if (BuildConfig.DEBUG) Log.i(TAG, "GL_RENDERER = $renderer")
             renderer
         } catch (e: Exception) {
-            Log.w(TAG, "EGL renderer detection failed", e)
+            if (BuildConfig.DEBUG) Log.w(TAG, "EGL renderer detection failed", e)
             "unknown"
         }
     }
@@ -151,7 +152,7 @@ class GpuCapabilityChecker @Inject constructor(
                 ?: ""
             featuresLine.lowercase()
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to read /proc/cpuinfo", e)
+            if (BuildConfig.DEBUG) Log.w(TAG, "Failed to read /proc/cpuinfo", e)
             ""
         }
     }

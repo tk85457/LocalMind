@@ -1,5 +1,6 @@
 package com.localmind.app.core.di
 
+import com.localmind.app.BuildConfig
 import com.localmind.app.data.remote.HuggingFaceApi
 import com.localmind.app.data.remote.HfAuthHeaderInterceptor
 import com.localmind.app.data.remote.RemoteInferenceApi
@@ -27,13 +28,19 @@ object NetworkModule {
     fun provideOkHttpClient(
         hfAuthHeaderInterceptor: HfAuthHeaderInterceptor
     ): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
-        }
-
+        // SECURITY FIX: HTTP logging ONLY in debug builds
+        // In release builds, network requests are never logged — prevents token/URL leaks
+        // OWASP MSTG-NETWORK-1, MSTG-RESILIENCE-2
         return OkHttpClient.Builder()
             .addInterceptor(hfAuthHeaderInterceptor)
-            .addInterceptor(logging)
+            .apply {
+                if (BuildConfig.DEBUG) {
+                    val logging = HttpLoggingInterceptor().apply {
+                        level = HttpLoggingInterceptor.Level.BASIC
+                    }
+                    addInterceptor(logging)
+                }
+            }
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)

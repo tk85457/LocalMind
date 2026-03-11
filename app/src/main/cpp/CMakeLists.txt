@@ -10,6 +10,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG -fvisibility=hidden -ffunction-sections -fdata-sections")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -DNDEBUG -fvisibility=hidden -ffunction-sections -fdata-sections")
 
+# OWASP MASVS: Native library hardening flags
+# CMAKE_POSITION_INDEPENDENT_CODE=ON is the correct CMake way to enable -fPIC
+# for ALL targets including llama.cpp subdirectory targets (ggml-base, etc.)
+# Using add_compile_options(-fPIC) was wrong — it only affected targets defined
+# AFTER the call, not llama.cpp's internal targets built via add_subdirectory.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all -D_FORTIFY_SOURCE=2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-all -D_FORTIFY_SOURCE=2")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,relro,-z,now,-z,noexecstack")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,relro,-z,now,-z,noexecstack")
+
 # Do not force a single ARM ISA globally here.
 # ggml will build multiple CPU backend variants and select the best one at runtime.
 
@@ -17,6 +28,12 @@ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -DNDEBUG -fvisibility=hi
 set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+# Disable cpp-httplib OpenSSL warning
+set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
+set(LLAMA_SERVER_SSL OFF CACHE BOOL "" FORCE)
+# Suppress Git-not-found warning — build info not needed for Android
+set(LLAMA_BUILD_INFO OFF CACHE BOOL "" FORCE)
+set(GIT_EXECUTABLE "" CACHE FILEPATH "" FORCE)
 set(LLAMA_BUILD_COMMON ON CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_TOOLS ON CACHE BOOL "" FORCE)
 set(LLAMA_CUBLAS OFF CACHE BOOL "" FORCE)

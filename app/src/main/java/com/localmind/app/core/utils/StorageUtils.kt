@@ -15,6 +15,11 @@ object StorageUtils {
         return stat.availableBytes
     }
 
+    /**
+     * SECURITY NOTE: This reads external storage AVAILABLE SPACE only (read-only stat).
+     * No sensitive data is WRITTEN to external storage (MSTG-STORAGE-2).
+     * Model files are stored in internal app storage (context.filesDir).
+     */
     fun getAvailablePrimaryExternalStorage(): Long? {
         return runCatching {
             val path = Environment.getExternalStorageDirectory()

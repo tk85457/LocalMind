@@ -210,7 +210,7 @@ class HuggingFaceRepository @Inject constructor(
                 val body = if (response.isSuccessful) response.body() ?: emptyList() else emptyList()
                 body.map { mapResponseToInfo(it) }
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.w("HuggingFaceRepo", "error", e)
                 emptyList()
             }
         }
@@ -526,3 +526,4 @@ sealed class DownloadState {
     data class Completed(val modelName: String) : DownloadState()
     data class Error(val message: String) : DownloadState()
 }
+

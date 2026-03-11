@@ -313,7 +313,7 @@ private fun PurgeConfirmDialog(
         title = { Text("Purge Model?", color = com.localmind.app.ui.theme.NeonText, fontWeight = FontWeight.Bold) },
         text = {
             Text(
-                "\"$modelName\" permanently delete ho jaayega. Isko wapas download karna hoga.",
+                "\"$modelName\" will be permanently deleted. You will need to download it again.",
                 color = com.localmind.app.ui.theme.NeonTextSecondary
             )
         },

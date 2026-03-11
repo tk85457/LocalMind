@@ -25,7 +25,7 @@ class DocumentHelper(private val context: Context) {
                 extractTextFromPlainText(inputStream)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.w("DocumentHelper", "extractText failed", e)
             null
         }
     }
@@ -43,7 +43,7 @@ class DocumentHelper(private val context: Context) {
                 stripper.getText(document)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.w("DocumentHelper", "extractTextFromPdf failed", e)
             null
         }
     }

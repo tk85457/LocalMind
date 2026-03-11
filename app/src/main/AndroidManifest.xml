@@ -5,19 +5,16 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Storage permissions not needed per SAF (Storage Access Framework) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+    <!-- SECURITY: RECEIVE_BOOT_COMPLETED NOT declared — app does NOT auto-start on boot -->
+
     <uses-feature
         android:name="android.hardware.touchscreen"
         android:required="false" />
-
-    <!-- PocketPal parity: Hexagon DSP / NPU acceleration support -->
-    <!-- Qualcomm Snapdragon pe neural network ops accelerate hote hain -->
-    <!-- required=false: non-Snapdragon devices pe bhi app chalti rahegi -->
     <uses-feature
         android:name="android.hardware.chip.snpe"
         android:required="false" />
@@ -36,7 +33,7 @@
 
     <application
         android:name=".LocalMindApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:enableOnBackInvokedCallback="true"
@@ -44,7 +41,18 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.LocalMind">
+        android:theme="@style/Theme.LocalMind"
+        android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/network_security_config">
+
+        <!--
+            SECURITY FIXES APPLIED:
+            1. allowBackup="false" — prevents ADB backup data extraction (OWASP MSTG-STORAGE-8)
+            2. usesCleartextTraffic="false" — blocks all HTTP, enforces HTTPS (MSTG-NETWORK-2)
+            3. networkSecurityConfig — custom policy, blocks cleartext, no user CAs (MSTG-NETWORK-3)
+            4. All services/receivers have exported="false" — not accessible by external apps
+            5. No RECEIVE_BOOT_COMPLETED — app does not auto-start
+        -->
 
         <activity
             android:name=".MainActivity"
@@ -68,17 +76,20 @@
                 tools:node="remove" />
         </provider>
 
+        <!-- SECURITY: exported="false" — internal service only, no external access -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
 
+        <!-- SECURITY: exported="false" — not accessible to other apps -->
         <service
             android:name=".service.LLMService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- SECURITY: exported="false" — only this app can send broadcasts to it -->
         <receiver
             android:name=".receiver.DownloadActionReceiver"
             android:exported="false" />

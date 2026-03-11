@@ -874,7 +874,7 @@ class ChatViewModel @Inject constructor(
                 historyMessages = boundedHistoryMessages,
                 currentUserInput = finalContent
             )
-            android.util.Log.d("ChatViewModel", "Using native chat template (jinja=true), messages_json_len=${messagesJson.length}")
+            if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.d("ChatViewModel", "Using native chat template (jinja=true), messages_json_len=${messagesJson.length}")
             chatRepository.generateWithMessages(messagesJson, tunedConfig)
         } else {
             // Legacy prompt-string path (PromptBuilderService)
@@ -1499,7 +1499,7 @@ class ChatViewModel @Inject constructor(
                     options = ActivationOptions(source = ActivationSource.AUTO_RESTORE)
                 )
             } catch (e: Exception) {
-                android.util.Log.w("LocalMind", "Auto-load model failed: ${e.message}")
+                if (com.localmind.app.BuildConfig.DEBUG) android.util.Log.w("LocalMind", "Auto-load model failed: ${e.message}")
             } finally {
                 _state.update { it.copy(isLoadingModel = false) }
                 ensureLoadedJob = null
