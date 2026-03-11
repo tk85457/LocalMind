@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -40,15 +42,20 @@ android {
         }
     }
 
+    // Load signing credentials from local.properties
+    val localProps = Properties().also { props ->
+        val f = rootProject.file("local.properties")
+        if (f.exists()) props.load(f.inputStream())
+    }
+
     signingConfigs {
         create("release") {
             storeFile = file("release.keystore")
-            // SECURITY FIX: Passwords from local.properties — NOT hardcoded in source
-            storePassword = (project.findProperty("KEYSTORE_PASS") as String?)
+            storePassword = localProps["KEYSTORE_PASS"] as String?
                 ?: System.getenv("KEYSTORE_PASS") ?: ""
-            keyAlias = (project.findProperty("KEY_ALIAS") as String?)
+            keyAlias = localProps["KEY_ALIAS"] as String?
                 ?: System.getenv("KEY_ALIAS") ?: "localmind-release"
-            keyPassword = (project.findProperty("KEY_PASS") as String?)
+            keyPassword = localProps["KEY_PASS"] as String?
                 ?: System.getenv("KEY_PASS") ?: ""
         }
     }
@@ -98,7 +105,7 @@ android {
 
     // Kotlin 2.0+ uses composeCompiler block instead of composeOptions
     composeCompiler {
-        enableStrongSkippingMode = true
+        // Strong skipping is enabled by default in Kotlin 2.0+ compose compiler
     }
 
     packaging {
