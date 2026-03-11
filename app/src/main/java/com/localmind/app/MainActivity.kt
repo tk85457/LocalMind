@@ -311,7 +311,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
     }
 
-    override fun onNewIntent(intent: android.content.Intent?) {
+    override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         handleNavigationIntent(intent)
