@@ -1,0 +1,4 @@
+[build]
+  command = "npx vite build"
+  publish = "../public"
+
