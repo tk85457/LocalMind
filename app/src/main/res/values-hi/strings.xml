@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Local Mind - Private Offline AI</string>
+    <string name="app_name">Local Mind</string>
     <string name="settings_title">सेटिंग्स</string>
     <string name="settings_appearance">उपस्थिति</string>
     <string name="settings_storage">भंडारण</string>
@@ -44,14 +44,13 @@
     <string name="restore_models_body">डाउनलोड किए गए मॉडल गायब पाए गए। पुनः डाउनलोड किए बिना पुनर्स्थापित करने के लिए अपने मॉडल फ़ोल्डर को लिंक करें।</string>
     <string name="restore_models_relink">फ़ोल्डर पुनः लिंक करें</string>
     <string name="restore_models_later">बाद में</string>
-    <string name="drawer_title">Local Mind - Private Offline AI</string>
+    <string name="drawer_title">Local Mind</string>
     <string name="drawer_chat">चैट</string>
     <string name="drawer_history">इतिहास</string>
     <string name="drawer_model_library">मॉडल लाइब्रेरी</string>
     <string name="drawer_hf_hub">हगिंग फेस हब</string>
     <string name="drawer_import_model">मॉडल आयात करें</string>
     <string name="drawer_benchmark">बेंचमार्क</string>
-    <string name="drawer_personas">पर्सोना</string>
     <string name="drawer_recent_chats">हाल की चैट</string>
     <string name="drawer_untitled_chat">शीर्षक रहित चैट</string>
     <string name="drawer_settings">सेटिंग्स</string>
@@ -118,7 +117,7 @@
     <string name="delete">हटाएं</string>
     <string name="confirm">पुष्टि करें</string>
     <string name="loading">लोड हो रहा है...</string>
-    <string name="onboarding_welcome_title">Local Mind - Private Offline AI में आपका स्वागत है</string>
+    <string name="onboarding_welcome_title">Local Mind में आपका स्वागत है</string>
     <string name="onboarding_welcome_desc">शक्तिशाली AI मॉडल्स को पूरी तरह से ऑफ़लाइन चलाएं</string>
     <string name="onboarding_privacy_title">100% प्राइवेट</string>
     <string name="onboarding_privacy_desc">कोई क्लाउड नहीं, कोई ट्रैकिंग नहीं, कोई डेटा संग्रह नहीं। सब कुछ आपके डिवाइस पर रहता है।</string>
@@ -126,7 +125,7 @@
     <string name="onboarding_models_desc">2B से 8B पैरामीटर्स के GGUF मॉडल्स आयात करें और चलाएं</string>
     <string name="onboarding_get_started">शुरू करें</string>
     <string name="onboarding_skip">छोड़ें</string>
-    <string name="chat_input_hint">Local Mind - Private Offline AI को संदेश भेजें...</string>
+    <string name="chat_input_hint">Local Mind को संदेश भेजें...</string>
     <string name="chat_send">भेजें</string>
     <string name="chat_stop">रोकें</string>
     <string name="chat_regenerate">पुनः उत्पन्न करें</string>

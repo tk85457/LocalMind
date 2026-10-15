@@ -4,60 +4,63 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-// Neon Amethyst Theme Colors
+// ChatGPT Aesthetic Colors - Clean White & Dark Modes
 object LocalMindColors {
-    // Dark Palette
-    val DarkBackground = Color(0xFF0B0B12)
-    val DarkSurface = Color(0xFF12121A)
-    val DarkElevated = Color(0xFF1A1A24)
-    val DarkTextPrimary = Color(0xFFF5F3FF)
-    val DarkTextSecondary = Color(0xFFB8B5C3)
-    val DarkTextTertiary = Color(0xFF6B6878)
-    val DarkTextExtraMuted = Color(0xFF3F3D4A)
-    val DarkDivider = Color(0xFF1F1F2E)
+    // ChatGPT Dark Palette
+    val DarkBackground = Color(0xFF212121)    // ChatGPT web dark background
+    val DarkSurface = Color(0xFF171717)       // ChatGPT sidebar/drawer dark
+    val DarkElevated = Color(0xFF2F2F2F)      // ChatGPT card/bubble dark
+    val DarkTextPrimary = Color(0xFFECECEC)   // Crisp soft white
+    val DarkTextSecondary = Color(0xFFB4B4B4) // Readable secondary text
+    val DarkTextTertiary = Color(0xFF8E8E8E)
+    val DarkTextExtraMuted = Color(0xFF71717A)
+    val DarkDivider = Color(0xFF333333)       // Clean subtle dark divider
 
-    // Light Palette
-    val LightBackground = Color(0xFFF8FAFC)
-    val LightSurface = Color(0xFFFFFFFF)
-    val LightElevated = Color(0xFFF1F5F9)
-    val LightTextPrimary = Color(0xFF050D1A)   // Almost black â€” maximum contrast
-    val LightTextSecondary = Color(0xFF1E293B)  // Dark slate â€” was 0xFF475569 (too light)
-    val LightTextTertiary = Color(0xFF334155)   // Medium dark â€” was 0xFF94A3B8 (too light)
-    val LightTextExtraMuted = Color(0xFF64748B) // Readable muted â€” was 0xFFCBD5E1 (invisible)
-    val LightDivider = Color(0xFFCBD5E1)       // Slightly darker divider
+    // ChatGPT Light Palette (Pure White Theme)
+    val LightBackground = Color(0xFFFFFFFF)   // Pure White
+    val LightSurface = Color(0xFFFFFFFF)      // Pure White
+    val LightElevated = Color(0xFFF4F4F4)     // Soft neutral grey (ChatGPT user bubble & cards)
+    val LightTextPrimary = Color(0xFF0D0D0D)  // Deep Charcoal (ChatGPT primary text)
+    val LightTextSecondary = Color(0xFF5D5D5D)// Neutral grey (ChatGPT subtext)
+    val LightTextTertiary = Color(0xFF71717A)
+    val LightTextExtraMuted = Color(0xFF8E8E93)
+    val LightDivider = Color(0xFFE5E5E5)      // Crisp subtle border
 
-    // Shared Primary & Accents
-    val Primary = Color(0xFF8B5CF6)
-    val PrimaryVariant = Color(0xFF6D28D9)
-    val PrimaryLight = Color(0xFFA855F7)
-    val Accent = Color(0xFF8B5CF6)
-    val AccentGlow = Color(0x408B5CF6)
+    // Shared OpenAI / ChatGPT Signature Accents
+    val Primary = Color(0xFF10A37F)           // OpenAI Emerald Green
+    val PrimaryVariant = Color(0xFF0E8C6D)
+    val PrimaryLight = Color(0xFF1CD0A2)
+    val Accent = Color(0xFF10A37F)
+    val AccentGlow = Color(0x2510A37F)
+
+    // ChatGPT Specific Pill & Capsule Colors
+    val CharcoalDark = Color(0xFF0D0D0D)
+    val PureWhite = Color(0xFFFFFFFF)
 
     // Status
-    // Status
-    val Success = Color(0xFF10B981)
+    val Success = Color(0xFF10A37F)
     val Warning = Color(0xFFF59E0B)
     val Error = Color(0xFFEF4444)
     val Info = Color(0xFF3B82F6)
 
     // Blue Palette
-    val BluePrimary = Color(0xFF3B82F6) // Blue 500
-    val BluePrimaryVariant = Color(0xFF1D4ED8) // Blue 700
-    val BluePrimaryLight = Color(0xFF60A5FA) // Blue 400
+    val BluePrimary = Color(0xFF3B82F6)
+    val BluePrimaryVariant = Color(0xFF1D4ED8)
+    val BluePrimaryLight = Color(0xFF60A5FA)
     val BlueAccent = Color(0xFF3B82F6)
     val BlueAccentGlow = Color(0x403B82F6)
 
     // Green Palette
-    val GreenPrimary = Color(0xFF10B981) // Emerald 500
-    val GreenPrimaryVariant = Color(0xFF047857) // Emerald 700
-    val GreenPrimaryLight = Color(0xFF34D399) // Emerald 400
-    val GreenAccent = Color(0xFF10B981)
-    val GreenAccentGlow = Color(0x4010B981)
+    val GreenPrimary = Color(0xFF10A37F)
+    val GreenPrimaryVariant = Color(0xFF047857)
+    val GreenPrimaryLight = Color(0xFF34D399)
+    val GreenAccent = Color(0xFF10A37F)
+    val GreenAccentGlow = Color(0x4010A37F)
 
     // Orange Palette
-    val OrangePrimary = Color(0xFFF97316) // Orange 500
-    val OrangePrimaryVariant = Color(0xFFC2410C) // Orange 700
-    val OrangePrimaryLight = Color(0xFFFB923C) // Orange 400
+    val OrangePrimary = Color(0xFFF97316)
+    val OrangePrimaryVariant = Color(0xFFC2410C)
+    val OrangePrimaryLight = Color(0xFFFB923C)
     val OrangeAccent = Color(0xFFF97316)
     val OrangeAccentGlow = Color(0x40F97316)
 }
@@ -79,7 +82,13 @@ data class NeonColors(
     val warning: Color,
     val error: Color,
     val info: Color,
-    val divider: Color
+    val divider: Color,
+    val userBubble: Color = if (background == LocalMindColors.LightBackground) LocalMindColors.LightElevated else LocalMindColors.DarkElevated,
+    val userBubbleText: Color = if (background == LocalMindColors.LightBackground) LocalMindColors.LightTextPrimary else LocalMindColors.DarkTextPrimary,
+    val inputBackground: Color = if (background == LocalMindColors.LightBackground) LocalMindColors.LightElevated else LocalMindColors.DarkElevated,
+    val inputBorder: Color = if (background == LocalMindColors.LightBackground) LocalMindColors.LightDivider else LocalMindColors.DarkDivider,
+    val sendButton: Color = if (background == LocalMindColors.LightBackground) LocalMindColors.CharcoalDark else LocalMindColors.PureWhite,
+    val sendButtonIcon: Color = if (background == LocalMindColors.LightBackground) LocalMindColors.PureWhite else LocalMindColors.CharcoalDark
 )
 
 val LocalNeonColors = staticCompositionLocalOf<NeonColors> {
@@ -104,3 +113,10 @@ val NeonWarning: Color @Composable get() = LocalNeonColors.current.warning
 val NeonError: Color @Composable get() = LocalNeonColors.current.error
 val NeonInfo: Color @Composable get() = LocalNeonColors.current.info
 val NeonDivider: Color @Composable get() = LocalNeonColors.current.divider
+val ChatUserBubble: Color @Composable get() = LocalNeonColors.current.userBubble
+val ChatUserBubbleText: Color @Composable get() = LocalNeonColors.current.userBubbleText
+val ChatInputBackground: Color @Composable get() = LocalNeonColors.current.inputBackground
+val ChatInputBorder: Color @Composable get() = LocalNeonColors.current.inputBorder
+val ChatSendButton: Color @Composable get() = LocalNeonColors.current.sendButton
+val ChatSendButtonIcon: Color @Composable get() = LocalNeonColors.current.sendButtonIcon
+val NeonBorder: Color @Composable get() = LocalNeonColors.current.inputBorder

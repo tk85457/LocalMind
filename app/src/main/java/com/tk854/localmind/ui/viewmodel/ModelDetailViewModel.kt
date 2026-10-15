@@ -105,25 +105,30 @@ class ModelDetailViewModel @Inject constructor(
     }
     fun activateModel() {
         viewModelScope.launch {
-            val safeResult = modelLifecycleManager.activateModelSafely(
-                modelId = modelId,
-                options = ActivationOptions(source = ActivationSource.USER)
-            )
-            val finalResult = if (safeResult.isSuccess) {
-                safeResult
-            } else {
-                modelLifecycleManager.activateModelSafely(
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                val safeResult = modelLifecycleManager.activateModelSafely(
                     modelId = modelId,
-                    options = ActivationOptions(
-                        forceLoad = true,
-                        source = ActivationSource.USER
-                    )
+                    options = ActivationOptions(source = ActivationSource.USER)
                 )
+                val finalResult = if (safeResult.isSuccess) {
+                    safeResult
+                } else {
+                    modelLifecycleManager.activateModelSafely(
+                        modelId = modelId,
+                        options = ActivationOptions(
+                            forceLoad = true,
+                            source = ActivationSource.USER
+                        )
+                    )
+                }
+                finalResult.onFailure {
+                    _errorMessage.value = it.message ?: "Could not start model on this phone."
+                }
+            } finally {
+                _isLoading.value = false
             }
-            finalResult.onFailure {
-                _errorMessage.value = it.message ?: "Could not start model on this phone."
-            }
-            // State is updated reactively via flow
         }
     }
 

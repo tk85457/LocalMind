@@ -8,55 +8,33 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.StopCircle
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.TextUnit
 import coil.compose.AsyncImage
 import com.tk854.localmind.domain.model.Message
 import com.tk854.localmind.domain.model.MessageRole
 import com.tk854.localmind.domain.model.Model
-import com.tk854.localmind.ui.theme.NeonElevated
-import com.tk854.localmind.ui.theme.NeonError
-import com.tk854.localmind.ui.theme.NeonPrimary
-import com.tk854.localmind.ui.theme.NeonSurface
-import com.tk854.localmind.ui.theme.NeonText
-import com.tk854.localmind.ui.theme.NeonTextSecondary
+import com.tk854.localmind.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -79,61 +57,55 @@ fun MessageBubble(
     onCopy: (String) -> Unit = {}
 ) {
     val isUser = message.role == MessageRole.USER
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val maxBubbleWidth = (LocalConfiguration.current.screenWidthDp * 0.82f).dp
 
     // Streaming cursor blink
     val cursorTransition = rememberInfiniteTransition(label = "cursor")
     val cursorAlpha by cursorTransition.animateFloat(
         initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(550), RepeatMode.Reverse),
         label = "cursorAlpha"
+    )
+
+    // Speaking pulse animation
+    val speakerTransition = rememberInfiniteTransition(label = "speakerPulse")
+    val speakerScale by speakerTransition.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.18f,
+        animationSpec = infiniteRepeatable(tween(450), RepeatMode.Reverse),
+        label = "speakerScale"
     )
 
     var showOptionsMenu by remember { mutableStateOf(false) }
     var showRegenerateWithMenu by remember { mutableStateOf(false) }
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    var liked by remember { mutableStateOf<Boolean?>(null) }
+
     val timeLabel = remember(message.timestamp) {
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
     }
 
+    val baseContent = visibleMessageContent(message)
+    val streamingCursor = if (isStreaming && cursorAlpha > 0.5f) " ▌" else ""
+    val contentWithCursor = if (streamingCursor.isNotEmpty()) baseContent + streamingCursor else baseContent
+    val hasVisibleContent = contentWithCursor.isNotBlank() || !message.reasoningContent.isNullOrBlank()
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
     ) {
-        // Role label Ã¢â‚¬â€ small muted text above message
-        Text(
-            text = if (isUser) "YOU" else "Local Mind - Private Offline AI AI",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.5.sp
-            ),
-            // Higher alpha for light theme readability
-            color = if (isUser) NeonPrimary else NeonTextSecondary,
-            modifier = Modifier.padding(bottom = 2.dp, start = 4.dp, end = 4.dp)
-        )
-
-        // ThinkingBubble for saved messages Ã¢â‚¬â€ collapsed by default (isStreaming=false)
-        // Shows "Thought for Xs" header, user can expand to see reasoning
-        if (showReasoning && !message.reasoningContent.isNullOrBlank()) {
-            ThinkingBubble(
-                reasoning = message.reasoningContent,
-                isStreaming = false,  // saved message = always collapsed state
-                thinkingDurationSec = message.thinkingDurationSec,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
-        }
-
         // Attached image preview
         if (message.imageUri != null) {
             Box(
                 modifier = Modifier
                     .padding(bottom = 6.dp)
-                    .widthIn(max = 220.dp)
-                    .align(if (isUser) Alignment.End else Alignment.Start)
+                    .widthIn(max = 240.dp)
                     .aspectRatio(16f / 9f)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(14.dp))
                     .background(NeonElevated)
             ) {
                 AsyncImage(
@@ -145,201 +117,253 @@ fun MessageBubble(
             }
         }
 
-        // Main message Ã¢â‚¬â€ NO background, plain text, left/right aligned
-        // STREAMING FIX: cursor ko content se alag rakho taaki code block regex match na tute.
-        // Agar cursor "Ã¢â€“Å’" code ke andar ghus jaaye toh closing ``` match fail ho jaata hai.
-        val baseContent = visibleMessageContent(message)
-        val streamingCursor = if (isStreaming && cursorAlpha > 0.5f) "Ã¢â€“Å’" else ""
+        // Thinking / Reasoning Block for AI messages
+        if (!isUser && showReasoning && !message.reasoningContent.isNullOrBlank()) {
+            ThinkingBubble(
+                reasoning = message.reasoningContent,
+                isStreaming = false,
+                thinkingDurationSec = message.thinkingDurationSec,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
 
-        // AUDIT FIX #5: remember memoize Ã¢â‚¬â€ har recomposition pe check nahi
-        val hasCodeBlock = remember(baseContent) { baseContent.contains("```") }
-        val contentWithCursor = if (streamingCursor.isNotEmpty()) baseContent + streamingCursor else baseContent
-        // AUDIT FIX #3: reasoningContent bhi check karo Ã¢â‚¬â€ reasoning hai lekin content empty
-        // toh message bubble hide na ho
-        val hasVisibleContent = contentWithCursor.isNotBlank() || !message.reasoningContent.isNullOrBlank()
-
-        val longPressModifier = Modifier.combinedClickable(
+        val clickModifier = Modifier.combinedClickable(
             onClick = {},
             onLongClick = {
-                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 showOptionsMenu = true
             }
         )
 
         if (isUser) {
-            // USER: Row + Arrangement.End = hamesha right side, koi bhi content size ho
+            // USER MESSAGE: Rounded soft bubble aligned to the right (ChatGPT style)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                Column(
+                Surface(
+                    color = ChatUserBubble,
+                    shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
-                        .widthIn(max = 300.dp)
-                        .then(longPressModifier)
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                    horizontalAlignment = Alignment.End
+                        .widthIn(max = maxBubbleWidth)
+                        .then(clickModifier)
                 ) {
-                    MarkdownText(
-                        markdown = contentWithCursor,
-                        color = NeonText,
-                        fontSize = 15.5f,
-                        isStreaming = isStreaming
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                     ) {
-                        Text(
-                            text = timeLabel,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = NeonTextSecondary.copy(alpha = 0.35f)
+                        MarkdownText(
+                            markdown = contentWithCursor,
+                            color = ChatUserBubbleText,
+                            fontSize = 15f,
+                            isStreaming = isStreaming
                         )
                     }
                 }
             }
         } else if (hasVisibleContent) {
-            // AI: left-aligned, full width allowed (code blocks ke liye)
-            Box(
+            // ASSISTANT MESSAGE: Left-aligned, seamless background (ChatGPT canvas style)
+            Column(
                 modifier = Modifier
-                    .then(if (hasCodeBlock) Modifier.fillMaxWidth() else Modifier.widthIn(max = 300.dp))
-                    .then(longPressModifier)
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .fillMaxWidth()
+                    .then(clickModifier)
+                    .padding(vertical = 2.dp)
             ) {
-                Column {
-                    MarkdownText(
-                        markdown = contentWithCursor,
-                        color = NeonText,
-                        fontSize = 15.5f,
-                        isStreaming = isStreaming
-                    )
+                MarkdownText(
+                    markdown = contentWithCursor,
+                    color = NeonText,
+                    fontSize = 15.5f,
+                    isStreaming = isStreaming
+                )
+
+                // ChatGPT Action Toolbar Below Response
+                if (!isStreaming && hasVisibleContent) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(
-                        modifier = Modifier
-                            .padding(top = 4.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        if (!isStreaming) {
-                            val statsParts = mutableListOf<String>()
-                            message.ttftMs?.takeIf { it > 0L }?.let { ttft ->
-                                statsParts += "TTFT ${ttft}ms"
+                        // Action Icons: Copy, Thumbs Up, Thumbs Down, Speaker, Regenerate, Share
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            // Copy button
+                            IconButton(
+                                onClick = { onCopy(baseContent) },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "Copy message",
+                                    tint = NeonTextSecondary,
+                                    modifier = Modifier.size(15.dp)
+                                )
                             }
-                            message.tokensPerSecond?.takeIf { it > 0f }?.let { tps ->
-                                statsParts += String.format("%.1f t/s", tps)
+
+                            // Like (Thumbs up)
+                            IconButton(
+                                onClick = {
+                                    liked = if (liked == true) null else true
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (liked == true) Icons.Default.ThumbUp else Icons.Outlined.ThumbUp,
+                                    contentDescription = "Good response",
+                                    tint = if (liked == true) NeonPrimary else NeonTextSecondary,
+                                    modifier = Modifier.size(15.dp)
+                                )
                             }
-                            if (statsParts.isNotEmpty()) {
-                                Text(
-                                    text = statsParts.joinToString(" Ã‚Â· ") + " Ã‚Â· ",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = NeonTextSecondary.copy(alpha = 0.6f)
+
+                            // Dislike (Thumbs down)
+                            IconButton(
+                                onClick = {
+                                    liked = if (liked == false) null else false
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (liked == false) Icons.Default.ThumbDown else Icons.Outlined.ThumbDown,
+                                    contentDescription = "Bad response",
+                                    tint = if (liked == false) NeonError else NeonTextSecondary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+
+                            // Read Aloud / TTS
+                            IconButton(
+                                onClick = onSpeak,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isSpeaking) Icons.Default.StopCircle else Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = if (isSpeaking) "Stop reading" else "Read aloud",
+                                    tint = if (isSpeaking) NeonPrimary else NeonTextSecondary,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .scale(if (isSpeaking) speakerScale else 1f)
+                                )
+                            }
+
+                            // Regenerate
+                            IconButton(
+                                onClick = onRegenerate,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Regenerate response",
+                                    tint = NeonTextSecondary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+
+                            // Share
+                            IconButton(
+                                onClick = onShare,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Share",
+                                    tint = NeonTextSecondary,
+                                    modifier = Modifier.size(15.dp)
                                 )
                             }
                         }
-                        Text(
-                            text = timeLabel,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = NeonTextSecondary.copy(alpha = 0.6f)
-                        )
+
+                        // Subtle telemetry stats (e.g. "24.5 t/s")
+                        val statsParts = mutableListOf<String>()
+                        message.tokensPerSecond?.takeIf { it > 0f }?.let { tps ->
+                            statsParts += String.format("%.1f t/s", tps)
+                        }
+                        if (statsParts.isNotEmpty()) {
+                            Text(
+                                text = statsParts.joinToString(" · "),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                color = NeonTextExtraMuted
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // Action buttons (model messages only, after streaming)
-        if (!isStreaming && !isUser && hasVisibleContent) {
-            Row(
-                modifier = Modifier.padding(top = 2.dp, start = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                IconButton(onClick = { onCopy(baseContent) }, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.ContentCopy, "Copy",
-                        tint = NeonTextSecondary, modifier = Modifier.size(14.dp))
-                }
-                IconButton(onClick = onShare, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.Share, "Share",
-                        tint = NeonTextSecondary, modifier = Modifier.size(14.dp))
-                }
-                IconButton(onClick = onSpeak, modifier = Modifier.size(26.dp)) {
-                    Icon(
-                        if (isSpeaking) Icons.Default.StopCircle else Icons.AutoMirrored.Filled.VolumeUp,
-                        if (isSpeaking) "Stop" else "Speak",
-                        tint = if (isSpeaking) NeonPrimary else NeonTextSecondary,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-                IconButton(onClick = onRegenerate, modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Default.Refresh, "Regenerate",
-                        tint = NeonTextSecondary, modifier = Modifier.size(14.dp))
-                }
-            }
-        }
-
-        // Long-press context menu
+        // Long-Press Context Menu
         DropdownMenu(
             expanded = showOptionsMenu,
             onDismissRequest = { showOptionsMenu = false },
             modifier = Modifier.background(NeonSurface)
         ) {
             DropdownMenuItem(
-                text = { Text(if (isSpeaking) "Stop Reading" else "Speak", color = NeonText) },
+                text = { Text("Copy", color = NeonText) },
+                leadingIcon = { Icon(Icons.Default.ContentCopy, null, tint = NeonTextSecondary, modifier = Modifier.size(18.dp)) },
+                onClick = { onCopy(baseContent); showOptionsMenu = false }
+            )
+            DropdownMenuItem(
+                text = { Text(if (isSpeaking) "Stop Reading" else "Read Aloud", color = NeonText) },
                 leadingIcon = {
                     Icon(
                         if (isSpeaking) Icons.Default.StopCircle else Icons.AutoMirrored.Filled.VolumeUp,
-                        null, tint = NeonPrimary
+                        null,
+                        tint = if (isSpeaking) NeonPrimary else NeonTextSecondary,
+                        modifier = Modifier.size(18.dp)
                     )
                 },
                 onClick = { onSpeak(); showOptionsMenu = false }
             )
             DropdownMenuItem(
-                text = { Text("Copy", color = NeonText) },
-                onClick = { onCopy(baseContent); showOptionsMenu = false }
-            )
-            DropdownMenuItem(
                 text = { Text("Share", color = NeonText) },
+                leadingIcon = { Icon(Icons.Default.Share, null, tint = NeonTextSecondary, modifier = Modifier.size(18.dp)) },
                 onClick = { onShare(); showOptionsMenu = false }
             )
             if (isUser) {
                 DropdownMenuItem(
-                    text = { Text("Edit", color = NeonText) },
+                    text = { Text("Edit Message", color = NeonText) },
+                    leadingIcon = { Icon(Icons.Default.Edit, null, tint = NeonTextSecondary, modifier = Modifier.size(18.dp)) },
                     onClick = {
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        onEdit(message.id); showOptionsMenu = false
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onEdit(message.id)
+                        showOptionsMenu = false
                     }
                 )
             } else {
                 DropdownMenuItem(
                     text = { Text("Regenerate", color = NeonText) },
+                    leadingIcon = { Icon(Icons.Default.Refresh, null, tint = NeonTextSecondary, modifier = Modifier.size(18.dp)) },
                     onClick = {
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        onRegenerate(); showOptionsMenu = false
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onRegenerate()
+                        showOptionsMenu = false
                     }
                 )
-                // "Try again with different model" Ã¢â‚¬â€ PocketPal style
                 if (availableModels.size > 1) {
                     DropdownMenuItem(
-                        text = { Text("Try again with...", color = NeonTextSecondary) },
-                        trailingIcon = {
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                null, tint = NeonTextSecondary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        },
-                        onClick = { showRegenerateWithMenu = true; showOptionsMenu = false }
+                        text = { Text("Try with different model", color = NeonText) },
+                        leadingIcon = { Icon(Icons.Default.SmartToy, null, tint = NeonTextSecondary, modifier = Modifier.size(18.dp)) },
+                        onClick = {
+                            showOptionsMenu = false
+                            showRegenerateWithMenu = true
+                        }
                     )
                 }
             }
+            HorizontalDivider(color = NeonDivider, thickness = 0.5.dp)
             DropdownMenuItem(
                 text = { Text("Delete", color = NeonError) },
+                leadingIcon = { Icon(Icons.Default.Delete, null, tint = NeonError, modifier = Modifier.size(18.dp)) },
                 onClick = {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    onDelete(); showOptionsMenu = false
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onDelete()
+                    showOptionsMenu = false
                 }
             )
         }
 
-        // "Try again with [Model]" submenu
+        // Submenu: Try again with specific model
         DropdownMenu(
             expanded = showRegenerateWithMenu,
             onDismissRequest = { showRegenerateWithMenu = false },
@@ -361,7 +385,7 @@ fun MessageBubble(
                         )
                     },
                     onClick = {
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onRegenerateWithModel(model)
                         showRegenerateWithMenu = false
                     }
@@ -372,7 +396,6 @@ fun MessageBubble(
 }
 
 private fun visibleMessageContent(message: Message): String {
-    // Strip tag markers only Ã¢â‚¬â€ text content stays, raw <think></think> nahi dikhega
     return message.content
         .replace("<think>", "")
         .replace("</think>", "")

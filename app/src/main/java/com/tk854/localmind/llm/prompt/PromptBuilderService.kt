@@ -14,7 +14,7 @@ data class PromptBuildRequest(
     val explicitSystemPrompt: String,
     val fallbackSystemPrompt: String,
     val currentSummary: String? = null,
-    // POCKETPAL FIX: Dynamic EOS detection â€” model file path pass karo
+    // POCKETPAL FIX: Dynamic EOS detection  —  model file path pass karo
     // taaki GGUF metadata se actual EOS token detect ho sake.
     val modelPath: String? = null,
     // FIX: Reasoning models (<think> block) generation time pe 500-2000 extra tokens use karte hain.
@@ -47,7 +47,7 @@ class PromptBuilderService @Inject constructor(
             .coerceAtLeast(if (ramGb <= 4) 128 else 128)
         val inputBudgetTokens = (request.tunedContextSize - generationReserveTokens).coerceAtLeast(128)
 
-        // POCKETPAL FIX: Dynamic EOS detection â€” model path se GGUF metadata padho.
+        // POCKETPAL FIX: Dynamic EOS detection  —  model path se GGUF metadata padho.
         val resolvedProfile = templateResolver.resolveWithModelPath(
             model = request.model,
             explicitSystemPrompt = request.explicitSystemPrompt,
@@ -75,7 +75,7 @@ class PromptBuilderService @Inject constructor(
         }
 
         // PERF FIX: History messages NEWEST FIRST order mein iterate karo.
-        // Oldest messages drop karo jab budget khatam ho â€” NEWEST messages preserve karo.
+        // Oldest messages drop karo jab budget khatam ho  —  NEWEST messages preserve karo.
         // Ye PocketPal ke convertToChatMessages() behavior ke saath match karta hai.
         // CRITICAL for prefix caching: system prompt + recent turns stable rehte hain
         // across consecutive messages, allowing KV cache hits.

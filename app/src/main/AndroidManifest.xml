@@ -84,11 +84,6 @@
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
 
-        <!-- SECURITY: exported="false" — not accessible to other apps -->
-        <service
-            android:name=".service.LLMService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
 
         <!-- SECURITY: exported="false" — only this app can send broadcasts to it -->
         <receiver

@@ -119,7 +119,7 @@ class HybridInferenceRouter @Inject constructor(
                     collector.emit(result)
                 }
                 is GenerationResult.Reasoning -> {
-                    // Pass reasoning events downstream â€” collectors handle display
+                    // Pass reasoning events downstream  —  collectors handle display
                     collector.emit(result)
                 }
                 is GenerationResult.Token -> {

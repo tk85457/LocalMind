@@ -42,7 +42,7 @@ class LocalMindApplication : Application(), Configuration.Provider {
         initializeStorageDirectories()
 
         // LOW-RAM MIGRATION: Existing users ke liye purani heavy defaults fix karo.
-        // DataStore mein saved values override karo â€” sirf tab jab old (heavy) values hain.
+        // DataStore mein saved values override karo  —  sirf tab jab old (heavy) values hain.
         applicationScope.launch { settingsRepository.applyLowRamMigrationIfNeeded() }
 
         // Preload active model as soon as app boots.
@@ -62,7 +62,9 @@ class LocalMindApplication : Application(), Configuration.Provider {
                 modelLifecycleManager.activateModelSafely(
                     modelId = activeModel.id,
                     options = ActivationOptions(source = ActivationSource.AUTO_RESTORE)
-                )
+                ).getOrThrow()
+            }.onFailure { e ->
+                if (BuildConfig.DEBUG) android.util.Log.w("LocalMindApp", "Startup model preload failed: ${e.message}")
             }
         }
     }

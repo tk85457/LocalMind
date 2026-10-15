@@ -23,10 +23,10 @@ class TemplateResolver @Inject constructor(
 
         /**
          * POCKETPAL FIX: Dynamic EOS stop token detection from GGUF metadata.
-         * Model ka hparams map check karo â€” tokenizer.ggml.eos_token_id ya
+         * Model ka hparams map check karo  —  tokenizer.ggml.eos_token_id ya
          * tokenizer.ggml.eot_token_id key hoti hai.
          * Ye important hai kyunki different models alag EOS tokens use karte hain.
-         * PocketPal bhi yahi approach use karta hai â€” metadata se eos detect karo.
+         * PocketPal bhi yahi approach use karta hai  —  metadata se eos detect karo.
          */
         fun extractEosTokensFromMetadata(hparams: Map<String, String>): List<String> {
             val eosTokens = mutableListOf<String>()
@@ -107,14 +107,14 @@ class TemplateResolver @Inject constructor(
             .distinct()
 
         // PERF: System prompt priority: explicit (persona) > model recommended > empty.
-        // Koi hardcoded fallback nahi â€” extra tokens = slow TTFT.
+        // Koi hardcoded fallback nahi  —  extra tokens = slow TTFT.
         // DEEPSEEK R1 FIX: R1 distill models (especially 1.5B) system prompt se
         // confuse hoke garbage (@@@@@ etc.) generate karte hain.
         // Known issue: https://github.com/ggml-org/llama.cpp/issues/10781
         // Fix: DeepSeek R1 ke liye system prompt force-empty karo.
         val isDeepSeekR1 = spec.id == TemplateCatalog.TEMPLATE_DEEPSEEK_R1
         val resolvedSystemPrompt = if (isDeepSeekR1) {
-            "" // DeepSeek R1: no system prompt â€” model expects empty system
+            "" // DeepSeek R1: no system prompt  —  model expects empty system
         } else {
             explicitSystemPrompt
                 ?.trim()

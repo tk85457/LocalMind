@@ -110,7 +110,7 @@ class LlamaCppBridge {
      * POCKETPAL PARITY: Generate using native chat template (messages API)
      *
      * Kotlin se structured messages JSON bhejo, C++ side pe model ka built-in
-     * GGUF chat template auto-detect hokar apply hota hai â€” exactly like
+     * GGUF chat template auto-detect hokar apply hota hai  —  exactly like
      * PocketPal's context.completion({ messages: [...], jinja: true }).
      *
      * @param contextPtr Context pointer from loadModel()
@@ -225,7 +225,7 @@ class LlamaCppBridge {
     external fun getChatTemplate(contextPtr: Long): String?
 
     /**
-     * AUTO STOP TOKEN DETECTION â€” fully dynamic, zero hardcoding.
+     * AUTO STOP TOKEN DETECTION  —  fully dynamic, zero hardcoding.
      * Extracts stop tokens from 3 layers:
      *   1. Vocab special tokens (EOS + EOT IDs from llama_vocab API)
      *   2. Chat template scan (quoted markers like <|eot_id|>, <|im_end|> etc.)
@@ -234,7 +234,7 @@ class LlamaCppBridge {
      * Returns empty string (never null) if nothing found.
      *
      * Call this ONCE after model load (in updateAutoStopTokens).
-     * All models â€” Llama-3, Qwen, Gemma, DeepSeek, Phi, Mistral, etc. â€”
+     * All models  —  Llama-3, Qwen, Gemma, DeepSeek, Phi, Mistral, etc.  — 
      * are handled automatically without any hardcoded token lists.
      */
     external fun getStopTokensFromModel(contextPtr: Long): String

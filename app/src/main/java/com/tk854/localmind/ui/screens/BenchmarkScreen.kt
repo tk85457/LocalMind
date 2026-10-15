@@ -67,7 +67,7 @@ fun BenchmarkScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Realtime Hardware Dashboard â€” always visible
+            // Realtime Hardware Dashboard  —  always visible
             HardwareDashboard(stats = hardwareStats, activeModel = activeModel)
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -104,9 +104,9 @@ fun BenchmarkScreen(
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
 // Idle Screen
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
 @Composable
 private fun IdleView(onStart: () -> Unit) {
     Column(
@@ -143,7 +143,7 @@ private fun IdleView(onStart: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            "âš¡ Uses chat template â€” same path as actual chat",
+            "⚡ Uses chat template — same path as actual chat",
             style = MaterialTheme.typography.bodySmall,
             color = NeonPrimary,
             textAlign = TextAlign.Center
@@ -164,9 +164,9 @@ private fun IdleView(onStart: () -> Unit) {
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Running Screen â€” REALTIME live stats
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
+// Running Screen  —  REALTIME live stats
+// -----------------------------------------------------------------------------
 @Composable
 private fun RunningView(
     state: BenchmarkState.Running,
@@ -229,7 +229,7 @@ private fun RunningView(
 
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            activeModel?.let { "Model: ${it.name} â€¢ ${it.quantization}" } ?: "Loading model...",
+            activeModel?.let { "Model: ${it.name} • ${it.quantization}" } ?: "Loading model...",
             style = MaterialTheme.typography.bodySmall,
             color = NeonTextSecondary
         )
@@ -258,9 +258,9 @@ private fun LiveStatItem(label: String, value: String) {
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Complete Screen â€” Detailed + Useful Results
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
+// Complete Screen  —  Detailed + Useful Results
+// -----------------------------------------------------------------------------
 @Composable
 private fun CompleteView(result: BenchmarkResult, onReset: () -> Unit) {
 
@@ -293,7 +293,7 @@ private fun CompleteView(result: BenchmarkResult, onReset: () -> Unit) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Main TPS â€” hero metric
+        // Main TPS  —  hero metric
         Text(
             String.format("%.2f", result.tokensPerSecond),
             style = MaterialTheme.typography.displaySmall,
@@ -308,8 +308,8 @@ private fun CompleteView(result: BenchmarkResult, onReset: () -> Unit) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // â”€â”€ Section 1: Speed Metrics â”€â”€
-        BenchmarkCard(title = "âš¡ Speed Metrics") {
+        // ── Section 1: Speed Metrics ──
+        BenchmarkCard(title = "⚡ Speed Metrics") {
             ResultRow(
                 label = "Inference Speed",
                 value = String.format("%.2f t/s", result.tokensPerSecond),
@@ -344,8 +344,8 @@ private fun CompleteView(result: BenchmarkResult, onReset: () -> Unit) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // â”€â”€ Section 2: Memory â”€â”€
-        BenchmarkCard(title = "ðŸ’¾ Memory Usage") {
+        // ── Section 2: Memory ──
+        BenchmarkCard(title = "💾 Memory Usage") {
             ResultRow(
                 label = "RAM Used by App",
                 value = "${result.peakMemoryMB} MB",
@@ -372,8 +372,8 @@ private fun CompleteView(result: BenchmarkResult, onReset: () -> Unit) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // â”€â”€ Section 3: Config â”€â”€
-        BenchmarkCard(title = "âš™ï¸ Run Configuration") {
+        // ── Section 3: Config ──
+        BenchmarkCard(title = "⚙️ Run Configuration") {
             // 2-column config row
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 ConfigItem(label = "Context", value = "${result.contextSize} tokens")
@@ -396,7 +396,7 @@ private fun CompleteView(result: BenchmarkResult, onReset: () -> Unit) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // â”€â”€ What does this mean? â”€â”€
+        // -- What does this mean? --
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -404,7 +404,7 @@ private fun CompleteView(result: BenchmarkResult, onReset: () -> Unit) {
             border = androidx.compose.foundation.BorderStroke(1.dp, NeonPrimary.copy(alpha = 0.2f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("ðŸ“Š What does this mean?",
+                Text("📊 What does this mean?",
                     style = MaterialTheme.typography.labelMedium,
                     color = NeonPrimary, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(6.dp))
@@ -478,9 +478,9 @@ private fun ConfigItem(label: String, value: String) {
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
 // Error Screen
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
 @Composable
 private fun ErrorView(message: String, onReset: () -> Unit) {
     Column(
@@ -520,9 +520,9 @@ private fun ErrorView(message: String, onReset: () -> Unit) {
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Hardware Dashboard â€” Realtime System Monitor
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
+// Hardware Dashboard  —  Realtime System Monitor
+// -----------------------------------------------------------------------------
 @Composable
 private fun HardwareDashboard(
     stats: com.tk854.localmind.core.utils.HardwareStats?,
@@ -592,7 +592,7 @@ private fun HardwareDashboard(
                             buildString {
                                 append(m.quantization)
                                 val gb = m.sizeBytes / (1024f * 1024f * 1024f)
-                                if (gb > 0) append(" â€¢ ${String.format("%.1f", gb)} GB")
+                                if (gb > 0) append(" • ${String.format("%.1f", gb)} GB")
                             }
                         } ?: "--",
                         style = MaterialTheme.typography.bodySmall,
@@ -606,7 +606,7 @@ private fun HardwareDashboard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = NeonText, fontWeight = FontWeight.Bold)
                     Text(
-                        stats?.let { "%.1f GB â€¢ %d cores".format(it.totalRamGb,
+                        stats?.let { "%.1f GB • %d cores".format(it.totalRamGb,
                             Runtime.getRuntime().availableProcessors()) } ?: "--",
                         style = MaterialTheme.typography.bodySmall,
                         color = NeonTextExtraMuted
@@ -655,9 +655,9 @@ private fun DashLabel(text: String) {
         letterSpacing = 0.5.sp)
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
 // Shared Components
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
 @Composable
 private fun HardwareGauge(label: String, value: Float, displayValue: String, color: Color) {
     val trackColor = NeonTextExtraMuted.copy(alpha = 0.1f)
@@ -752,9 +752,9 @@ private fun ResultRow(
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
 // Helpers
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -----------------------------------------------------------------------------
 private fun formatDuration(ms: Long): String = when {
     ms <= 0   -> "--"
     ms < 1000 -> "${ms}ms"

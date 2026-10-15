@@ -5,7 +5,7 @@ import javax.inject.Inject
 class PromptSanitizationUseCase @Inject constructor() {
 
     companion object {
-        // Pre-compiled regex patterns â€” avoids creating new Regex on every token callback
+        // Pre-compiled regex patterns  —  avoids creating new Regex on every token callback
         private val TAG_PATTERN = Regex("<\\|.*?\\|>")
         private val DANGLING_TAG_OPENER = Regex("<\\|[^\\s\\n]*")
         private val PARTIAL_TAG_SUFFIX = Regex("\\b(?:start_header_id|end_header_id|eot_id|begin_of_text|im_start|im_end)\\|?")
@@ -39,7 +39,7 @@ class PromptSanitizationUseCase @Inject constructor() {
 
     fun stripStreamingTags(text: String): String {
         // Sirf pipe-style special tokens strip karo (<|im_end|> etc.)
-        // <think>, <thinking>, <thought>, <reasoning> â€” KABHI STRIP MAT KARO
+        // <think>, <thinking>, <thought>, <reasoning>  —  KABHI STRIP MAT KARO
         var result = TAG_PATTERN.replace(text, "")
         result = result
             .replace("<start_of_turn>", "")
@@ -89,7 +89,7 @@ class PromptSanitizationUseCase @Inject constructor() {
         if (rawText.isBlank()) return ""
         val originalTrimmed = rawText.trim()
 
-        // <think> / reasoning tags â€” STRIP MAT KARO
+        // <think> / reasoning tags  —  STRIP MAT KARO
         // LLMEngine already reasoning aur answer alag emit karta hai.
         // answerBuffer mein kabhi <think> content nahi hona chahiye.
         // Agar kisi edge case mein aa bhi jaaye toh user ko dikhne do.
@@ -106,7 +106,7 @@ class PromptSanitizationUseCase @Inject constructor() {
 
         var text = trimStopSequences(spacedPipeStripped, stopTokens)
 
-        // Strip ONLY pipe-style chat template tokens â€” NOT angle-bracket reasoning tags
+        // Strip ONLY pipe-style chat template tokens  —  NOT angle-bracket reasoning tags
         text = text
             .replace("<|begin_of_text|>", "")
             .replace("<|start_header_id|>", "")
@@ -126,7 +126,7 @@ class PromptSanitizationUseCase @Inject constructor() {
 
         text = stripDanglingTagArtifacts(text)
 
-        // Role prefix â€” sirf pehli line pe
+        // Role prefix  —  sirf pehli line pe
         val lines = text.lines().toMutableList()
         if (lines.isNotEmpty()) {
             val firstLine = lines[0].trim()
@@ -143,7 +143,7 @@ class PromptSanitizationUseCase @Inject constructor() {
 
         if (text.isNotBlank()) return text.trim()
 
-        // Fallback â€” <think> tags bhi NAHI strip karein
+        // Fallback  —  <think> tags bhi NAHI strip karein
         val fallbackLines = originalTrimmed
             .replace(Regex("<\\|[^>]+\\|>"), " ")
             .replace("<start_of_turn>", " ")

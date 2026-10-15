@@ -167,7 +167,7 @@ class ModelRepository @Inject constructor(
                     filePath = storedFile.absolutePath,
                     sizeBytes = storedFile.length(),
                     quantization = inferredQuantization,
-                    contextLength = 4096, // Safer default â€” most modern models support 4K+
+                    contextLength = 4096, // Safer default  —  most modern models support 4K+
                     parameterCount = "Unknown",
                     installDate = System.currentTimeMillis(),
                     isActive = true,

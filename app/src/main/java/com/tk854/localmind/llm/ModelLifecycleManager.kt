@@ -44,7 +44,7 @@ class ModelLifecycleManager @Inject constructor(
 
         // TTFT FIX: Fast-path check BEFORE acquiring modelLock.
         // Agar model already loaded hai toh lock acquire karne ki zarurat hi nahi.
-        // Pehle lock ke andar yeh check tha â€” lock wait + 3 DataStore reads = ~8s delay.
+        // Pehle lock ke andar yeh check tha  —  lock wait + 3 DataStore reads = ~8s delay.
         if (!options.forceLoad) {
             val model = modelRepository.getModelById(modelId)
             if (model != null && modelRepository.modelFileExists(model)) {
@@ -62,7 +62,7 @@ class ModelLifecycleManager @Inject constructor(
                     // Already-loaded fast path still has to update DB/UI active state.
                     modelRepository.activateModel(modelId)
                     settingsRepository.clearActiveCloudModel()
-                    // Already loaded â€” return immediately, zero disk I/O
+                    // Already loaded  —  return immediately, zero disk I/O
                     return Result.success(ModelLifecyclePlan(
                         contextSize = loadedContext,
                         threadCount = 0, // not used by caller
@@ -113,11 +113,10 @@ class ModelLifecycleManager @Inject constructor(
                 return Result.success(currentPlan)
             }
 
-            // BUG FIX: Profile cache invalidate karo taaki fresh RAM reading mile.
-            // Pehla model unload ho chuka hai â€” cached value stale hai.
+            // Refresh profile cache to get fresh RAM readings
             deviceProfileManager.invalidateProfileCache()
 
-            val requestedPlan = if (options.forceLoad) {
+            val effectivePlan = if (options.forceLoad) {
                 deviceProfileManager.forcePlan(
                     modelSizeBytes = model.sizeBytes,
                     modelNameHint = model.name,
@@ -135,86 +134,18 @@ class ModelLifecycleManager @Inject constructor(
                 )
             }
 
-            val fallbackForcePlan = if (!requestedPlan.allowed) {
-                deviceProfileManager.forcePlan(
-                    modelSizeBytes = model.sizeBytes,
-                    modelNameHint = model.name,
-                    quantizationHint = model.quantization,
-                    parameterCountHint = model.parameterCount,
-                    requestedContextSize = requestedContextSize
-                )
-            } else {
-                null
-            }
+            val totalRamGb = deviceProfileManager.currentProfile().totalRamGb
+            val plan = ModelLifecyclePlan(
+                contextSize = effectivePlan.contextSize.coerceAtLeast(512),
+                threadCount = effectivePlan.threadCount.coerceAtLeast(if (totalRamGb <= 3) 2 else 4),
+                maxTokens = effectivePlan.maxTokens.coerceAtLeast(256)
+            )
 
-            val effectivePlan = when {
-                requestedPlan.allowed -> requestedPlan
-                fallbackForcePlan?.allowed == true -> fallbackForcePlan
-                else -> requestedPlan
-            }
-
-            val plan = if (effectivePlan.allowed) {
-                ModelLifecyclePlan(
-                    contextSize = effectivePlan.contextSize,
-                    threadCount = effectivePlan.threadCount,
-                    maxTokens = effectivePlan.maxTokens
-                )
-            } else {
-                val totalRamGb = deviceProfileManager.currentProfile().totalRamGb
-                ModelLifecyclePlan(
-                    contextSize = model.contextLength.coerceIn(512, if (totalRamGb <= 3) 1024 else 2048),
-                    // PERF FIX: 4 threads minimum â€” 2 threads was halving speed on 8-core SoCs
-                    threadCount = 4,
-                    maxTokens = if (totalRamGb <= 3) 768 else 1024
-                )
-            }
-
-            // POCKETPAL FIX: Dusra model load se pehle pehla ZAROOR unload karo.
-            // PocketPal: _releaseContextInternal() â†’ ctx.release() â†’ NativeHardwareInfo.getAvailableMemory()
-            // LocalMind: Same approach â€” unload + verify RAM freed before next load.
-            //
-            // ROOT CAUSE of "1B model not loading" bug:
-            // SmolLM2-1.7B loaded (1.7GB in RAM). Llama-1B needs 1.23GB.
-            // Total = 2.93GB but only 2.0GB available â†’ CRASH.
-            // Simple fix: unload pehle wala, VERIFY RAM freed, THEN load naya.
+            // Direct, clean unload of any existing model before loading the new one
             if (chatRepository.isModelLoaded()) {
                 chatRepository.stopGeneration()
-                withTimeoutOrNull(8_000L) {
+                withTimeoutOrNull(5_000L) {
                     chatRepository.unloadModel()
-                }
-                // POCKETPAL FIX: PocketPal release ke baad availableMemoryCeiling update karta hai.
-                // Hum bhi GC + actual RAM measurement karte hain.
-                System.gc()
-                System.runFinalization()
-
-                // POCKETPAL EXACT: Wait for OS to actually reclaim native pages.
-                // PocketPal: "await new Promise(resolve => setTimeout(resolve, 100))"
-                // Hum 600ms wait karte hain â€” Android mein native heap reclaim
-                // JS se slower hota hai (JNI deallocation + OS page reclaim).
-                kotlinx.coroutines.delay(600L)
-
-                // POCKETPAL EXACT: Release ke baad fresh RAM measure karo.
-                // PocketPal: NativeHardwareInfo.getAvailableMemory() after ctx.release()
-                // Agar abhi bhi RAM low hai toh aur wait karo (max 3 attempts).
-                val actMgr = context.getSystemService(Context.ACTIVITY_SERVICE)
-                    as ActivityManager
-                var verifyAttempts = 0
-                val totalRamBytes = run {
-                    val mi = ActivityManager.MemoryInfo()
-                    actMgr.getMemoryInfo(mi)
-                    mi.totalMem
-                }
-                while (verifyAttempts < 3) {
-                    val memInfo = ActivityManager.MemoryInfo()
-                    actMgr.getMemoryInfo(memInfo)
-                    // Available RAM > 40% of total = safe to load next model
-                    if (memInfo.availMem > totalRamBytes * 0.40) break
-                    android.util.Log.w("ModelLifecycle",
-                        "RAM not yet freed (${memInfo.availMem / 1048576}MB avail), waiting... attempt ${verifyAttempts + 1}")
-                    System.gc()
-                    System.runFinalization()
-                    kotlinx.coroutines.delay(500L)
-                    verifyAttempts++
                 }
             }
 
@@ -229,9 +160,6 @@ class ModelLifecycleManager @Inject constructor(
                 } else {
                     modelRepository.activateModel(modelId)
                     settingsRepository.clearActiveCloudModel()
-                    // TTFT FIX: Result.success pehle return karo, settings baad mein apply hongi.
-                    // modelLock.withLock ke andar hi hain isliye withLock block se bahar nahi ja sakte.
-                    // Simple fix: directly call karo â€” ye fast hai (sirf agar showAdvanced=false).
                     runCatching { applyRecommendedSamplingSettings(model) }
                     Result.success(plan)
                 }
@@ -241,44 +169,6 @@ class ModelLifecycleManager @Inject constructor(
                 Result.failure(t)
             }
         }
-    }
-
-    suspend fun ensureModelLoaded(model: Model): Result<ModelLifecyclePlan> {
-        if (!modelRepository.modelFileExists(model)) {
-            return Result.failure(IllegalStateException("Model file is missing. Re-download required."))
-        }
-
-        val check = deviceProfileManager.checkModelLoad(
-            modelSizeBytes = model.sizeBytes,
-            modelNameHint = model.name,
-            quantizationHint = model.quantization,
-            parameterCountHint = model.parameterCount,
-            requestedContextSize = model.contextLength
-        )
-
-        val result = chatRepository.loadModel(model)
-        if (result.isFailure) {
-            return Result.failure(result.exceptionOrNull() ?: Exception("Failed to load model"))
-        }
-
-        val plan = if (check.allowed) {
-            ModelLifecyclePlan(
-                contextSize = check.tunedContextSize,
-                threadCount = check.tunedThreadCount,
-                maxTokens = check.tunedMaxTokens
-            )
-        } else {
-            val totalRamGb = deviceProfileManager.currentProfile().totalRamGb
-            ModelLifecyclePlan(
-                contextSize = model.contextLength.coerceIn(512, 1024),
-                threadCount = if (totalRamGb <= 4) 1 else 2,
-                maxTokens = if (totalRamGb <= 4) 64 else 128
-            )
-        }
-
-        return Result.success(
-            plan
-        )
     }
 
     suspend fun unloadModelSafely() {

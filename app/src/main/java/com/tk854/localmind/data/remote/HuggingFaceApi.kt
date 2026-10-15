@@ -15,7 +15,7 @@ interface HuggingFaceApi {
         @Query("sort") sort: String? = "downloads",
         @Query("direction") direction: Int? = -1,
         @Query("limit") limit: Int = 50,
-        // full=true includes lfs size in siblings â€” needed for real file sizes
+        // full=true includes lfs size in siblings  —  needed for real file sizes
         @Query("full") full: Boolean? = true
     ): Call<List<HFModelResponse>>
 

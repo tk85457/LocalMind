@@ -56,13 +56,12 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun LocalMindTheme(
-    darkMode: Boolean = true,
+    darkMode: Boolean = false,
     fontScale: Float = 1.0f,
     themeColor: String = "Neon",
     fontFamily: String = "Default",
     content: @Composable () -> Unit
 ) {
-    // ... (color logic remains the same)
     val (primary, primaryVariant, primaryLight, accent, accentGlow) = when (themeColor) {
         "Blue" -> listOf(
             LocalMindColors.BluePrimary,
@@ -86,11 +85,11 @@ fun LocalMindTheme(
             LocalMindColors.OrangeAccentGlow
         )
         "Purple" -> listOf(
-            Color(0xFF9C27B0), // Primary
-            Color(0xFF7B1FA2), // Variant
-            Color(0xFFE1BEE7), // Light
-            Color(0xFFE040FB), // Accent
-            Color(0xFFE040FB)  // Glow
+            Color(0xFF9C27B0),
+            Color(0xFF7B1FA2),
+            Color(0xFFE1BEE7),
+            Color(0xFFE040FB),
+            Color(0xFFE040FB)
         )
         "Red" -> listOf(
             Color(0xFFF44336),
@@ -148,7 +147,13 @@ fun LocalMindTheme(
                 warning = LocalMindColors.Warning,
                 error = LocalMindColors.Error,
                 info = LocalMindColors.Info,
-                divider = LocalMindColors.DarkDivider
+                divider = LocalMindColors.DarkDivider,
+                userBubble = LocalMindColors.DarkElevated,
+                userBubbleText = LocalMindColors.DarkTextPrimary,
+                inputBackground = LocalMindColors.DarkElevated,
+                inputBorder = LocalMindColors.DarkDivider,
+                sendButton = LocalMindColors.PureWhite,
+                sendButtonIcon = LocalMindColors.CharcoalDark
             )
         } else {
             NeonColors(
@@ -168,7 +173,13 @@ fun LocalMindTheme(
                 warning = LocalMindColors.Warning,
                 error = LocalMindColors.Error,
                 info = LocalMindColors.Info,
-                divider = LocalMindColors.LightDivider
+                divider = LocalMindColors.LightDivider,
+                userBubble = LocalMindColors.LightElevated,
+                userBubbleText = LocalMindColors.LightTextPrimary,
+                inputBackground = LocalMindColors.LightElevated,
+                inputBorder = LocalMindColors.LightDivider,
+                sendButton = LocalMindColors.CharcoalDark,
+                sendButtonIcon = LocalMindColors.PureWhite
             )
         }
     }

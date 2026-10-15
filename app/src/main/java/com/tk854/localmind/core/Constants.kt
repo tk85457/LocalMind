@@ -23,7 +23,7 @@ object Constants {
     const val QUANTIZATION_Q5 = "Q5"
     const val QUANTIZATION_Q8 = "Q8"
 
-    // Context Limits â€” single source of truth
+    // Context Limits  —  single source of truth
     const val MAX_CONTEXT_SIZE = 4960          // Hard cap: sabhi jagah yahi use hoga
     const val CONTEXT_SIZE_4GB = 1024
     const val CONTEXT_SIZE_6GB = 1536
@@ -44,7 +44,7 @@ object Constants {
     // Generation
     const val GENERATION_TIMEOUT_MS = 300_000L
     // POCKETPAL FIX: Token stream delay REMOVED.
-    // PocketPal mein koi artificial streaming delay nahi hai â€” tokens turant emit hote hain.
+    // PocketPal mein koi artificial streaming delay nahi hai  —  tokens turant emit hote hain.
     // 50ms delay = har token pe 50ms wait = 20 tokens/sec max cap = slow streaming.
     // 0ms = native inference speed se tokens aate hain (typically 10-50ms between tokens on device).
     const val TOKEN_STREAM_DELAY_MS = 0L

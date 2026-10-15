@@ -104,7 +104,7 @@ interface MessageDao {
     suspend fun deleteMessagesForConversations(conversationIds: List<String>)
 
     /**
-     * Get recent messages across all conversations â€” for global history feed.
+     * Get recent messages across all conversations  —  for global history feed.
      * PocketPal equivalent: WatermelonDB query with sort + limit.
      */
     @Query("""

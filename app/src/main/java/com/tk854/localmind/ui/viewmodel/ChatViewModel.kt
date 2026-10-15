@@ -51,12 +51,10 @@ class ChatViewModel @Inject constructor(
     private val deviceProfileManager: DeviceProfileManager,
     private val promptBuilderService: PromptBuilderService,
     private val inferenceErrorMapper: InferenceErrorMapper,
-    private val personaRepository: PersonaRepository,
     private val featureRolloutConfig: FeatureRolloutConfig,
     private val promptSanitizationUseCase: com.tk854.localmind.domain.usecase.PromptSanitizationUseCase,
     private val getChatMessagesUseCase: com.tk854.localmind.domain.usecase.GetChatMessagesUseCase,
     private val getDownloadedModelsUseCase: GetDownloadedModelsUseCase,
-    private val getAvailablePersonasUseCase: com.tk854.localmind.domain.usecase.GetAvailablePersonasUseCase,
     private val autoRenameConversationUseCase: com.tk854.localmind.domain.usecase.AutoRenameConversationUseCase,
     private val renameConversationUseCase: com.tk854.localmind.domain.usecase.RenameConversationUseCase,
     private val deleteMessageUseCase: com.tk854.localmind.domain.usecase.DeleteMessageUseCase,
@@ -65,12 +63,7 @@ class ChatViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
     companion object {
-        // POCKETPAL FIX: Minimal fallback system prompt â€” model ke built-in template
-        // se system prompt auto-detect hota hai (TemplateResolver via PromptBuilderService).
-        // Ye sirf tab use hota hai jab koi persona/model template na ho.
-        // PERF: Koi default system prompt NAHI â€” sirf persona ka system prompt use hoga.
-        // System prompt extra tokens = TTFT badh jaata hai = slow first response.
-        // Agar persona ka system prompt blank ho tabhi empty string dena hai.
+        // Minimal fallback system prompt — model's built-in chat template is used by default
         private const val DEFAULT_SYSTEM_PROMPT = ""
 
         private const val MEDIA_ANALYSIS_UNSUPPORTED_MESSAGE =
@@ -83,7 +76,7 @@ class ChatViewModel @Inject constructor(
     // STREAMING FIX: Streaming text ko alag StateFlow mein nikalo.
     // Pehle: poora ChatState har token pe update hota tha = pura ChatScreen recompose.
     // Ab: sirf StreamingOverlay composable re-renders, baaki UI stable rehti hai.
-    // PocketPal mein bhi yahi pattern hai â€” modelStore.inferencingText alag observable hai.
+    // PocketPal mein bhi yahi pattern hai  —  modelStore.inferencingText alag observable hai.
     val streamingText: StateFlow<String?> = _state
         .map { it.streamingResponse }
         .distinctUntilChanged()
@@ -101,15 +94,15 @@ class ChatViewModel @Inject constructor(
     private val generationMutex = Mutex()
     private var launchSessionInitialized: Boolean = false
 
-    // â”€â”€ FIX #1: In-Memory Settings Cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // -- FIX #1: In-Memory Settings Cache -------------------------------------
     // PocketPal parity: Settings are always in-memory (MobX observables).
     // ChatViewModelSettings (in SettingsRepository.kt) se data aata hai, jo
     // DataStore ke single snapshot se build hota hai.
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // -------------------------------------------------------------------------
     @Volatile private var cachedSettings: ChatViewModelSettings? = null
     private var settingsCollectorJob: Job? = null
 
-    // Wake lock â€” CPU awake rakhta hai generation ke dauran (screen FLAG_KEEP_SCREEN_ON se ChatScreen handle karta hai)
+    // Wake lock  —  CPU awake rakhta hai generation ke dauran (screen FLAG_KEEP_SCREEN_ON se ChatScreen handle karta hai)
     private val wakeLock: PowerManager.WakeLock by lazy {
         val pm = appContext.getSystemService(Context.POWER_SERVICE) as PowerManager
         pm.newWakeLock(
@@ -129,14 +122,13 @@ class ChatViewModel @Inject constructor(
     init {
         loadActiveModel()
         observeActiveModel()
-        loadPersonas()
         loadDownloadedModels()
         loadPromptTemplates()
         startSettingsCollector()
     }
 
-    // FIX #1: Settings collector â€” har settings change par cachedSettings update hota hai.
-    // Ye PocketPal ke MobX observables ki tarah kaam karta hai â€” zero disk I/O at inference time.
+    // FIX #1: Settings collector  —  har settings change par cachedSettings update hota hai.
+    // Ye PocketPal ke MobX observables ki tarah kaam karta hai  —  zero disk I/O at inference time.
     // Strategy: combine() max 5 streams support karta hai. Isliye hum pehle saare streams ko
     // individually collect karte hain aur flatMapLatest pattern use karte hain. Simplest
     // correct approach: har DataStore change pe fresh read karo (still only 1 read cycle, not 23).
@@ -154,7 +146,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    // FIX #1: Helper â€” ek baar fresh read karo agar cache abhi tak populate nahi hua.
+    // FIX #1: Helper  —  ek baar fresh read karo agar cache abhi tak populate nahi hua.
     // Normal case mein ye kabhi call nahi hota (cache init pe bhar jaata hai).
     private suspend fun readSettingsOnceFresh(): ChatViewModelSettings {
         return settingsRepository.allSettingsFlow().first()
@@ -176,51 +168,11 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun loadPersonas() {
-        viewModelScope.launch {
-            getAvailablePersonasUseCase().collect { personas ->
-                _state.update { it.copy(availablePersonas = personas) }
-                // No auto-select â€” user manually select kare tab hi persona apply ho
-                // selectedPersona = null means no system prompt, model uses its built-in behavior
-            }
-        }
-    }
-
-
-
-    fun selectPersona(persona: Persona) {
-        _state.update { it.copy(selectedPersona = persona) }
-
-        currentConversationId?.let { convId ->
-            viewModelScope.launch {
-                chatRepository.updateConversationSystemPrompt(convId, persona.systemPrompt)
-            }
-        }
-
-        // #9: Auto-switch model when persona has a preferred model
-        val modelId = persona.preferredModelId
-        if (!modelId.isNullOrBlank()) {
-            viewModelScope.launch {
-                val model = modelRepository.getModelById(modelId)
-                if (model != null && model.id != _state.value.activeModel?.id) {
-                    runCatching {
-                        modelLifecycleManager.activateModelSafely(
-                            modelId = model.id,
-                            options = ActivationOptions(source = ActivationSource.USER)
-                        )
-                    }
-                    _state.update { it.copy(activeModel = model) }
-                    checkPerformance(model)
-                }
-            }
-        }
-    }
-
     fun switchModel(modelId: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoadingModel = true, error = null) }
             try {
-                modelLifecycleManager.activateModelSafely(modelId)
+                modelLifecycleManager.activateModelSafely(modelId).getOrThrow()
                 loadActiveModel()
             } catch (e: Exception) {
                 _state.update { it.copy(error = mapUserFacingError(e)) }
@@ -245,7 +197,7 @@ class ChatViewModel @Inject constructor(
                     }
                     return@launch
                 }
-                // STARTUP FIX: Sirf UI state update karo â€” model load mat karo.
+                // STARTUP FIX: Sirf UI state update karo  —  model load mat karo.
                 // LocalMindApplication.preloadActiveModelAtStartup() app open hote hi
                 // model load kar deta hai. Yahan dobara activateModelSafely() call karna
                 // redundant tha aur engineMutex block karta tha.
@@ -390,7 +342,7 @@ class ChatViewModel @Inject constructor(
                 title = "New Chat",
                 modelId = activeModel.id,
                 modelName = activeModel.name,
-                systemPrompt = _state.value.selectedPersona?.systemPrompt
+                systemPrompt = null
             )
             loadConversation(conversation.id)
         }
@@ -464,7 +416,7 @@ class ChatViewModel @Inject constructor(
 
     /**
      * PocketPal-style edit: message content ko input box mein bhejne ke baad
-     * user ne edit kiya â€” purana message delete karo aur phir naya send karo.
+     * user ne edit kiya  —  purana message delete karo aur phir naya send karo.
      * Returns the content so ChatScreen can put it in inputText.
      */
     fun startEditMessage(messageId: String): String? {
@@ -489,9 +441,9 @@ class ChatViewModel @Inject constructor(
         generationJob = viewModelScope.launch {
             acquireWakeLock()
             // TTFT FIX: engineMutex release hone tak wait karo.
-            // Cancel ke baad nativeJob.invokeOnCompletion async hai â€” mutex abhi bhi held ho sakta hai.
+            // Cancel ke baad nativeJob.invokeOnCompletion async hai  —  mutex abhi bhi held ho sakta hai.
             // Is wait ke bina naya generate() call 30s timeout ke liye block ho jaata tha.
-            chatRepository.waitForEngineReady(timeoutMs = 500L) // PERF: 2s â†’ 500ms â€” zyada wait nahi karna
+            chatRepository.waitForEngineReady(timeoutMs = 500L) // PERF: 2s → 500ms  —  zyada wait nahi karna
             try {
                 generationMutex.withLock {
                     // PocketPal-style edit: pehle purana message aur uske baad ke sab messages delete karo
@@ -571,7 +523,7 @@ class ChatViewModel @Inject constructor(
 
                     // POCKETPAL FIX: isGenerating=true IMMEDIATELY after user message insert.
                     // PocketPal mein modelStore.setInferencing(true) user message addMessage() ke
-                    // theek baad call hota hai â€” model load se pehle. Is se:
+                    // theek baad call hota hai  —  model load se pehle. Is se:
                     // 1. User ka send button turant disabled hota hai (no double-send)
                     // 2. UI generating state mein enter karti hai (thinking dots etc)
                     // Local Mind mein pehle ye executeGeneration() ke andar hota tha, matlab
@@ -587,7 +539,7 @@ class ChatViewModel @Inject constructor(
                         sendMessageStartMs = sendMessageStartMs
                     )
                 }
-                // PERF FIX: Summarization DISABLED â€” it was running a second inference
+                // PERF FIX: Summarization DISABLED  —  it was running a second inference
                 // after every message, blocking the engine for 5-15s. This was the #1
                 // bottleneck vs competitor apps. Can be re-enabled with a deferred,
                 // non-blocking approach (e.g., idle-time summarization).
@@ -641,7 +593,7 @@ class ChatViewModel @Inject constructor(
             return
         }
 
-        // FIX #1: In-memory settings cache â€” PocketPal parity.
+        // FIX #1: In-memory settings cache  —  PocketPal parity.
         // 23 DataStore disk reads ki jagah ab ek in-memory object se padhte hain.
         // cachedSettings null ho sakta hai sirf pehli baar jab app just start hua ho;
         // us case mein ek baar fresh read karte hain (readSettingsOnceFresh).
@@ -649,7 +601,7 @@ class ChatViewModel @Inject constructor(
         val rawTemperature = s.temperature
         val rawMaxTokens = s.maxTokens
         val rawTopP = s.topP
-        val rawContextSize = s.contextSize // user ki setting â€” no cap
+        val rawContextSize = s.contextSize // user ki setting  —  no cap
         val rawRepeatPenalty = s.penaltyRepeat
         val rawTopK = s.topK
         val rawThreadCount = s.threadCount
@@ -667,7 +619,7 @@ class ChatViewModel @Inject constructor(
         val rawMirostatEta = s.mirostatEta
         val rawNProbs = s.nProbs
         val rawJinja = s.jinja
-        // Use UI toggle state â€” user can override per-chat with thinking button
+        // Use UI toggle state  —  user can override per-chat with thinking button
         val rawEnableThinking = _state.value.isThinkingEnabled
         val rawIncludeThinkingInContext = s.includeThinkingInContext
 
@@ -730,11 +682,11 @@ class ChatViewModel @Inject constructor(
 
         var tunedConfig = modelLifecycleManager.tuneInferenceConfig(
             InferenceConfig(
-                // POCKETPAL FIX: Temperature clamp hatao â€” user ki setting respect karo.
+                // POCKETPAL FIX: Temperature clamp hatao  —  user ki setting respect karo.
                 // PocketPal temperature ko bilkul touch nahi karta.
-                // Pehle question-type detection se 0.55 max tha â€” ye models ko robotic banata tha.
+                // Pehle question-type detection se 0.55 max tha  —  ye models ko robotic banata tha.
                 temperature = baseTemperature.coerceIn(0f, 2f),
-                // Reasoning models: 8192 fixed â€” reasoning + answer dono ke liye enough
+                // Reasoning models: 8192 fixed  —  reasoning + answer dono ke liye enough
                 // max_tokens sirf upper limit hai, speed/TTFT affect nahi hota
                 maxTokens = if (isReasoningModel) 8192
                 else rawMaxTokens.coerceIn(32, 131072),
@@ -774,35 +726,41 @@ class ChatViewModel @Inject constructor(
         // Reasoning is only for UI display, not context
         val processedHistoryMessages = historyMessages.map { msg ->
             if (msg.role == com.tk854.localmind.domain.model.MessageRole.ASSISTANT) {
-                // Use cleanModelText â€” precompiled regexes, no GC pressure
+                // Use cleanModelText  —  precompiled regexes, no GC pressure
                 val stripped = com.tk854.localmind.ui.components.cleanModelText(msg.content)
                 msg.copy(content = stripped.ifBlank { msg.content })
             } else msg
         }
 
-        var boundedHistoryMessages = selectRecentHistoryWindow(
+        val useNativeTemplate = rawJinja && !hasImageAttachment
+
+        val boundedHistoryMessages = selectRecentHistoryWindow(
             messages = processedHistoryMessages,
             tunedContextSize = tunedConfig.contextSize
         )
-        var promptBuild = buildPromptWithHistory(
-            conversation = conversationSnapshot,
-            model = conversationModel,
-            historyMessages = boundedHistoryMessages,
-            currentInput = finalContent,
-            attachments = attachments,
-            context = context,
-            tunedContextSize = tunedConfig.contextSize,
-            isReasoningModel = isReasoningModel,
-            enableThinking = rawEnableThinking
-        )
-        tunedConfig = tunedConfig.copy(stopTokens = promptBuild.stopTokens)
-        var finalPrompt = promptBuild.prompt
 
-        // Generation start state â€” DONO model types ke liye kaam karega:
-        // - Non-reasoning models: isThinking=false â†’ pre-typing "Thinking..." dots dikhega
-        // - Reasoning models: isThinking=false initially â†’ first reasoning token pe true ho jayega
-        //   â†’ ThinkingBubble show hoga ChatScreen mein
-        // streamingResponse/Reasoning = "" (empty, NEVER null) â†’ flicker prevention
+        var finalPrompt = ""
+        if (!useNativeTemplate) {
+            val promptBuild = buildPromptWithHistory(
+                conversation = conversationSnapshot,
+                model = conversationModel,
+                historyMessages = boundedHistoryMessages,
+                currentInput = finalContent,
+                attachments = attachments,
+                context = context,
+                tunedContextSize = tunedConfig.contextSize,
+                isReasoningModel = isReasoningModel,
+                enableThinking = rawEnableThinking
+            )
+            tunedConfig = tunedConfig.copy(stopTokens = promptBuild.stopTokens)
+            finalPrompt = promptBuild.prompt
+        }
+
+        // Generation start state  —  DONO model types ke liye kaam karega:
+        // - Non-reasoning models: isThinking=false → pre-typing "Thinking..." dots dikhega
+        // - Reasoning models: isThinking=false initially → first reasoning token pe true ho jayega
+        //   → ThinkingBubble show hoga ChatScreen mein
+        // streamingResponse/Reasoning = "" (empty, NEVER null) → flicker prevention
         _state.update {
             it.copy(
                 isGenerating = true,  // ensure = true (regenerate path ke liye bhi)
@@ -811,14 +769,14 @@ class ChatViewModel @Inject constructor(
                 error = null,
                 streamingResponse = "",   // empty string, NEVER null at start
                 streamingReasoning = "",  // empty string, NEVER null
-                isThinking = false        // false at start â€” reasoning token aane pe true hoga
+                isThinking = false        // false at start  —  reasoning token aane pe true hoga
             )
         }
 
         val currentlyActiveModelId = _state.value.activeModel?.id
         @Suppress("UNUSED_VARIABLE") val shouldSwitchModel = currentlyActiveModelId != conversationModel.id
         // TTFT FIX: isModelLoaded() check ke saath loadedKey bhi verify karo.
-        // isModelLoaded() sirf ptr != 0 check karta hai â€” lekin loadedKey se confirm karo
+        // isModelLoaded() sirf ptr != 0 check karta hai  —  lekin loadedKey se confirm karo
         // ki SAME model loaded hai. Agar same model already loaded hai toh skip karo entirely.
         val (loadedKey, _) = chatRepository.getLoadedModelDetails()
         val targetKey = if (conversationModel.storageType == com.tk854.localmind.core.storage.ModelStorageType.SAF) {
@@ -846,9 +804,9 @@ class ChatViewModel @Inject constructor(
                 return
             }
         }
-        // else: model already loaded + same model â€” skip entirely (PocketPal behaviour)
+        // else: model already loaded + same model  —  skip entirely (PocketPal behaviour)
 
-        // TTFT FIX: getModelById() is a Room DB call â€” skip it if model hasn't changed.
+        // TTFT FIX: getModelById() is a Room DB call  —  skip it if model hasn't changed.
         // Only refresh if activeModel is different (e.g. after model switch).
         if (_state.value.activeModel?.id != conversationModel.id) {
             val refreshedModel = modelRepository.getModelById(conversationModel.id) ?: conversationModel
@@ -870,10 +828,10 @@ class ChatViewModel @Inject constructor(
         val assistantMessageId = UUID.randomUUID().toString()
 
 
-        // â”€â”€ Clean dual-buffer pipeline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- Clean dual-buffer pipeline ------------------------------------------
         // answerBuilder   = sirf answer tokens  (GenerationResult.Token)
         // reasoningBuilder = sirf reasoning tokens (GenerationResult.Reasoning)
-        // FALLBACK: Kotlin-side ReasoningParser â€” jab C++ ThinkingStateMachine
+        // FALLBACK: Kotlin-side ReasoningParser  —  jab C++ ThinkingStateMachine
         // tokens split nahi karta (enableThinking off, ya model-specific issue),
         // tab ye parser onToken mein aa rahe <think> tags detect karke
         // reasoning tokens ko reasoningBuilder mein route karta hai.
@@ -886,6 +844,7 @@ class ChatViewModel @Inject constructor(
         val fallbackParser   = ReasoningParser(assumeThinkingFromStart = thinkingEnabled && isReasoningModel)
 
         var receivedFirstToken = false
+        var nativeReasoningEmitted = false
         var lastTelemetryUpdateMs = 0L
         var lastUiUpdateMs = 0L
 
@@ -895,11 +854,8 @@ class ChatViewModel @Inject constructor(
             Constants.GENERATION_TIMEOUT_MS
         }
 
-        val useNativeTemplate = rawJinja && !hasImageAttachment
-
         val generationFlow = if (useNativeTemplate) {
-            val effectiveSystemPrompt = conversationSnapshot?.systemPrompt?.trim()?.takeIf { it.isNotEmpty() }
-                ?: _state.value.selectedPersona?.systemPrompt?.trim().orEmpty()
+            val effectiveSystemPrompt = conversationSnapshot?.systemPrompt?.trim().orEmpty()
             val messagesJson = chatRepository.buildMessagesJson(
                 systemPrompt = effectiveSystemPrompt,
                 historyMessages = boundedHistoryMessages,
@@ -954,17 +910,14 @@ class ChatViewModel @Inject constructor(
                         is GenerationResult.Reasoning -> {
                             val text = result.text
                             if (text.isNotEmpty()) {
+                                nativeReasoningEmitted = true
                                 if (!receivedFirstToken) {
                                     receivedFirstToken = true
                                     _state.update { it.copy(isAnalyzingMedia = false) }
                                 }
 
-                                // TOGGLE FIX: Jab thinking OFF hai, reasoning tokens ko
-                                // answerBuilder mein daalo â€” model treat as non-reasoning
-                                if (!thinkingEnabled) {
-                                    // Thinking OFF: Reasoning tokens ignore karo
-                                    // Token handler fallbackParser se handle karega - double append nahi hoga
-                                } else {
+                                // TOGGLE FIX: Jab thinking OFF hai, reasoning tokens ko ignore karo
+                                if (thinkingEnabled) {
                                     thinkStartMs = if (thinkStartMs == 0L) System.currentTimeMillis() else thinkStartMs
                                     reasoningBuilder.append(text)
                                     val nowMs = System.currentTimeMillis()
@@ -980,49 +933,11 @@ class ChatViewModel @Inject constructor(
                         }
 
                         is GenerationResult.Token -> {
-                            // KOTLIN FALLBACK: C++ ThinkingStateMachine kaam nahi kiya
-                            // toh fallbackParser se <think> tags detect karo.
-                            // DELTA-BASED: parser ke buffer lengths track karo before/after,
-                            // sirf naya added text APPEND karo builders mein (clear mat karo!).
-                            // Ye onReasoning handler se aaye text ko erase hone se bachata hai.
                             val text = result.text
                             if (text.isNotEmpty()) {
-                                // Snapshot parser buffer sizes BEFORE processing
-                                val prevReasoningLen = fallbackParser.reasoningBuffer.length
-                                val prevAnswerLen = fallbackParser.answerBuffer.length
-
-                                fallbackParser.processToken(text)
-
-                                // Extract ONLY what parser ADDED this token
-                                val addedReasoning = if (fallbackParser.reasoningBuffer.length > prevReasoningLen)
-                                    fallbackParser.reasoningBuffer.substring(prevReasoningLen) else ""
-                                val addedAnswer = if (fallbackParser.answerBuffer.length > prevAnswerLen)
-                                    fallbackParser.answerBuffer.substring(prevAnswerLen) else ""
-                                val isInThinking = fallbackParser.isCurrentlyThinking
-
-                                val isFirstToken = !receivedFirstToken
-
-                                // â”€â”€ Reasoning content detected â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                                if (addedReasoning.isNotEmpty()) {
-                                    if (isFirstToken) {
-                                        receivedFirstToken = true
-                                        thinkStartMs = System.currentTimeMillis()
-                                        _state.update { it.copy(isAnalyzingMedia = false) }
-                                    }
-                                    reasoningBuilder.append(addedReasoning)
-
-                                    val nowMs = System.currentTimeMillis()
-                                    if (isFirstToken || nowMs - lastUiUpdateMs >= 64) { // AUDIT FIX #5: 64ms
-                                        lastUiUpdateMs = nowMs
-                                        _state.update { it.copy(
-                                            streamingReasoning = reasoningBuilder.toString(), // AUDIT FIX: NEVER null
-                                            isThinking = true
-                                        )}
-                                    }
-                                }
-
-                                // â”€â”€ Answer content detected â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                                if (addedAnswer.isNotEmpty()) {
+                                if (nativeReasoningEmitted || !isReasoningModel || !thinkingEnabled) {
+                                    // Direct fast path: pure answer token, zero regex/fallbackParser overhead
+                                    val isFirstToken = !receivedFirstToken
                                     if (isFirstToken) {
                                         receivedFirstToken = true
                                         if (thinkStartMs > 0L && thinkEndMs == 0L) {
@@ -1032,10 +947,10 @@ class ChatViewModel @Inject constructor(
                                         android.util.Log.i("TTFT-KOTLIN", "First answer token: ${ttftMs}ms")
                                         _state.update { it.copy(isAnalyzingMedia = false, isThinking = false) }
                                     }
-                                    answerBuilder.append(addedAnswer)
+                                    answerBuilder.append(text)
 
                                     val nowMs = System.currentTimeMillis()
-                                    if (isFirstToken || nowMs - lastUiUpdateMs >= 64) { // AUDIT FIX #5: 64ms
+                                    if (isFirstToken || nowMs - lastUiUpdateMs >= 64) {
                                         lastUiUpdateMs = nowMs
                                         val liveTelemetry = if (nowMs - lastTelemetryUpdateMs > 1000) {
                                             lastTelemetryUpdateMs = nowMs
@@ -1045,28 +960,88 @@ class ChatViewModel @Inject constructor(
                                         _state.update {
                                             val newState = it.copy(
                                                 streamingResponse = com.tk854.localmind.ui.components.cleanStreamingText(answerBuilder.toString()).ifBlank { null },
-                                            isThinking = false
+                                                isThinking = false
                                             )
                                             if (liveTelemetry != null) newState.copy(streamingTelemetry = liveTelemetry) else newState
                                         }
                                     }
-                                }
+                                } else {
+                                    // Fallback path: when model emits raw <think> tags in token stream
+                                    val prevReasoningLen = fallbackParser.reasoningBuffer.length
+                                    val prevAnswerLen = fallbackParser.answerBuffer.length
 
-                                // â”€â”€ Tag-only token (no content added) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                                // <think> ya </think> tag â€” content nahi but state change chahiye
-                                if (addedReasoning.isEmpty() && addedAnswer.isEmpty()) {
-                                    if (isFirstToken) {
-                                        receivedFirstToken = true
-                                        if (isInThinking) thinkStartMs = System.currentTimeMillis()
-                                        _state.update { it.copy(isAnalyzingMedia = false) }
+                                    fallbackParser.processToken(text)
+
+                                    val addedReasoning = if (fallbackParser.reasoningBuffer.length > prevReasoningLen)
+                                        fallbackParser.reasoningBuffer.substring(prevReasoningLen) else ""
+                                    val addedAnswer = if (fallbackParser.answerBuffer.length > prevAnswerLen)
+                                        fallbackParser.answerBuffer.substring(prevAnswerLen) else ""
+                                    val isInThinking = fallbackParser.isCurrentlyThinking
+
+                                    val isFirstToken = !receivedFirstToken
+
+                                    if (addedReasoning.isNotEmpty()) {
+                                        if (isFirstToken) {
+                                            receivedFirstToken = true
+                                            thinkStartMs = System.currentTimeMillis()
+                                            _state.update { it.copy(isAnalyzingMedia = false) }
+                                        }
+                                        reasoningBuilder.append(addedReasoning)
+
+                                        val nowMs = System.currentTimeMillis()
+                                        if (isFirstToken || nowMs - lastUiUpdateMs >= 64) {
+                                            lastUiUpdateMs = nowMs
+                                            _state.update { it.copy(
+                                                streamingReasoning = reasoningBuilder.toString(),
+                                                isThinking = true
+                                            )}
+                                        }
                                     }
-                                    if (!isInThinking && thinkStartMs > 0L && thinkEndMs == 0L) {
-                                        thinkEndMs = System.currentTimeMillis()
+
+                                    if (addedAnswer.isNotEmpty()) {
+                                        if (isFirstToken) {
+                                            receivedFirstToken = true
+                                            if (thinkStartMs > 0L && thinkEndMs == 0L) {
+                                                thinkEndMs = System.currentTimeMillis()
+                                            }
+                                            val ttftMs = System.currentTimeMillis() - sendMessageStartMs
+                                            android.util.Log.i("TTFT-KOTLIN", "First answer token: ${ttftMs}ms")
+                                            _state.update { it.copy(isAnalyzingMedia = false, isThinking = false) }
+                                        }
+                                        answerBuilder.append(addedAnswer)
+
+                                        val nowMs = System.currentTimeMillis()
+                                        if (isFirstToken || nowMs - lastUiUpdateMs >= 64) {
+                                            lastUiUpdateMs = nowMs
+                                            val liveTelemetry = if (nowMs - lastTelemetryUpdateMs > 1000) {
+                                                lastTelemetryUpdateMs = nowMs
+                                                chatRepository.getLastInferenceTelemetry()
+                                            } else null
+
+                                            _state.update {
+                                                val newState = it.copy(
+                                                    streamingResponse = com.tk854.localmind.ui.components.cleanStreamingText(answerBuilder.toString()).ifBlank { null },
+                                                    isThinking = false
+                                                )
+                                                if (liveTelemetry != null) newState.copy(streamingTelemetry = liveTelemetry) else newState
+                                            }
+                                        }
                                     }
-                                    _state.update { it.copy(
-                                        isThinking = isInThinking,
-                                        streamingReasoning = reasoningBuilder.toString() // AUDIT FIX: NEVER null
-                                    )}
+
+                                    if (addedReasoning.isEmpty() && addedAnswer.isEmpty()) {
+                                        if (isFirstToken) {
+                                            receivedFirstToken = true
+                                            if (isInThinking) thinkStartMs = System.currentTimeMillis()
+                                            _state.update { it.copy(isAnalyzingMedia = false) }
+                                        }
+                                        if (!isInThinking && thinkStartMs > 0L && thinkEndMs == 0L) {
+                                            thinkEndMs = System.currentTimeMillis()
+                                        }
+                                        _state.update { it.copy(
+                                            isThinking = isInThinking,
+                                            streamingReasoning = reasoningBuilder.toString()
+                                        )}
+                                    }
                                 }
                             }
                         }
@@ -1082,7 +1057,7 @@ class ChatViewModel @Inject constructor(
                 }
             }
 
-            // â”€â”€ Final save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // -- Final save ------------------------------------------------------
             var finalAnswer   = sanitizeFinalText(answerBuilder.toString(),   tunedConfig.stopTokens)
             var finalReasoning = sanitizeFinalText(reasoningBuilder.toString(), tunedConfig.stopTokens)
             val thinkSec = if (thinkStartMs > 0L && thinkEndMs > 0L)
@@ -1092,7 +1067,7 @@ class ChatViewModel @Inject constructor(
             // FALLBACK SPLIT: Agar C++ ne <think> tags split nahi kiye (enableThinking off,
             // ya model-specific issue), toh Kotlin side pe extract karo.
             // Ye tab trigger hota hai jab reasoningBuilder khali hai lekin answerBuilder mein
-            // <think>...</think> tags hain â€” raw tags visible hone se rokega.
+            // <think>...</think> tags hain  —  raw tags visible hone se rokega.
             if (finalReasoning.isBlank() && finalAnswer.contains("<think>")) {
                 val (extractedReasoning, extractedAnswer) = splitThinkingContent(finalAnswer)
                 if (extractedReasoning.isNotBlank()) {
@@ -1106,7 +1081,7 @@ class ChatViewModel @Inject constructor(
                 .replace(Regex("</?think>"), "")
                 .trim()
 
-            // AUDIT FIX #4: STRICT SEPARATION â€” reasoning KABHI main message nahi banna chahiye.
+            // AUDIT FIX #4: STRICT SEPARATION  —  reasoning KABHI main message nahi banna chahiye.
             // content = sirf answer, reasoning = sirf reasoning. Dono independent fields hain.
             val contentToSave = finalAnswer  // answer only, reasoning mix nahi
             val reasoningToSave = finalReasoning  // reasoning only
@@ -1123,7 +1098,7 @@ class ChatViewModel @Inject constructor(
                         isThinking = false, lastPerfMetrics = metrics)
                 }
             } else {
-                // Empty result â€” clean reset, no blocking error
+                // Empty result  —  clean reset, no blocking error
                 // User can tap regenerate again
                 _state.update {
                     it.copy(isGenerating = false, isAnalyzingMedia = false,
@@ -1139,7 +1114,7 @@ class ChatViewModel @Inject constructor(
                 val rsn = sanitizeFinalText(reasoningBuilder.toString(), tunedConfig.stopTokens)
                 val thinkSec = if (thinkStartMs > 0L && thinkEndMs > 0L)
                     ((thinkEndMs - thinkStartMs) / 1000L).toInt().coerceAtLeast(0) else null
-                // AUDIT FIX #4: Strict separation â€” reasoning kabhi content mein nahi
+                // AUDIT FIX #4: Strict separation  —  reasoning kabhi content mein nahi
                 if (ans.isNotBlank() || rsn.isNotBlank()) {
                     buildAndSaveMessage(ans, rsn, thinkSec)
                 }
@@ -1180,7 +1155,7 @@ class ChatViewModel @Inject constructor(
                     error = mapUserFacingError(t))
             }
         } finally {
-            // AUDIT FIX #9: Single exit point â€” SARE states clean karo
+            // AUDIT FIX #9: Single exit point  —  SARE states clean karo
             _state.update { it.copy(
                 isGenerating = false, isAnalyzingMedia = false,
                 isAnalyzingDocument = false, isThinking = false
@@ -1222,7 +1197,7 @@ class ChatViewModel @Inject constructor(
             title = "New Chat",
             modelId = activeModel.id,
             modelName = activeModel.name,
-            systemPrompt = _state.value.selectedPersona?.systemPrompt
+            systemPrompt = null
         )
         loadConversation(conversation.id)
         return conversation.id
@@ -1241,7 +1216,7 @@ class ChatViewModel @Inject constructor(
             title = "New Chat",
             modelId = activeModel.id,
             modelName = activeModel.name,
-            systemPrompt = _state.value.selectedPersona?.systemPrompt
+            systemPrompt = null
         )
         loadConversation(conversation.id)
         return conversation
@@ -1258,14 +1233,6 @@ class ChatViewModel @Inject constructor(
         isReasoningModel: Boolean = false,
         enableThinking: Boolean = true
     ): PromptBuildResult {
-        val persona = _state.value.selectedPersona
-        val personaSystemPrompt = persona?.systemPrompt
-
-        val dynamicContext = if (persona != null) {
-            resolveDynamicContext(persona.contextMode, context) +
-            (if (persona.staticContext.isNotBlank()) "\nCONTEXT: ${persona.staticContext}" else "")
-        } else ""
-
         val attachmentBlock = buildAttachmentBlock(attachments, context)
         val documentText = _state.value.attachedDocumentText
         val currentUserBlock = buildString {
@@ -1278,21 +1245,11 @@ class ChatViewModel @Inject constructor(
                 append("\n\n[Document Content]:\n")
                 append(documentText)
             }
-            // STABLE PREFIX: Move changing timestamp to the end of the prompt.
-            // This keeps the system prompt and history stable for prefix caching.
-            if (dynamicContext.isNotBlank()) {
-                append("\n\n[Current Environment]:\n")
-                append(dynamicContext)
-            }
         }
 
-        // PERF: System prompt sirf persona se aata hai. Koi hardcoded fallback nahi.
-        // Blank system prompt = model apna built-in default use karta hai = extra tokens nahi.
-        val baseSystemPrompt = conversation?.systemPrompt?.trim()?.takeIf { it.isNotEmpty() }
-            ?: personaSystemPrompt?.trim().orEmpty()
-        val effectiveSystemPrompt = baseSystemPrompt
+        val effectiveSystemPrompt = conversation?.systemPrompt?.trim().orEmpty()
 
-        // POCKETPAL FIX: Dynamic EOS token detection â€” model file path pass karo
+        // POCKETPAL FIX: Dynamic EOS token detection  —  model file path pass karo
         // taaki GGUF metadata se actual EOS token automatically detect ho sake.
         val modelFilePath = model.filePath?.takeIf { it.isNotBlank() }
         val promptBuild = promptBuilderService.buildPrompt(
@@ -1411,8 +1368,8 @@ class ChatViewModel @Inject constructor(
         if (messages.isEmpty()) return emptyList()
 
         // POCKETPAL FIX: Hardcoded maxMessages=6 limit hatao.
-        // PocketPal mein koi message count limit nahi â€” sirf token budget se control hota hai.
-        // Pehle sirf 6 messages aur 25% budget tha â€” ye prompt cut aur memory loss ka main cause tha.
+        // PocketPal mein koi message count limit nahi  —  sirf token budget se control hota hai.
+        // Pehle sirf 6 messages aur 25% budget tha  —  ye prompt cut aur memory loss ka main cause tha.
         // Ab: 50% context budget history ke liye (PocketPal ki tarah).
         var remainingBudgetTokens = (tunedContextSize * 0.50f)
             .toInt()
@@ -1458,7 +1415,7 @@ class ChatViewModel @Inject constructor(
             // Race-condition-safe: switch model dan isLoadingModel=false hone tak wait karo
             _state.update { it.copy(isLoadingModel = true, error = null) }
             try {
-                modelLifecycleManager.activateModelSafely(model.id)
+                modelLifecycleManager.activateModelSafely(model.id).getOrThrow()
                 loadActiveModel()
             } catch (e: Exception) {
                 _state.update { it.copy(error = mapUserFacingError(e), isLoadingModel = false) }
@@ -1578,7 +1535,7 @@ class ChatViewModel @Inject constructor(
         val model = _state.value.activeModel ?: return
         // STARTUP FIX: Agar model already loaded hai toh bilkul skip karo.
         // Application.preloadActiveModelAtStartup() background mein load kar raha hota hai.
-        // is function ka kaam sirf "safety net" hai â€” jab genuinely load nahi hua tab.
+        // is function ka kaam sirf "safety net" hai  —  jab genuinely load nahi hua tab.
         if (chatRepository.isModelLoaded()) return
         if (_state.value.isLoadingModel || _state.value.isGenerating) return
         if (ensureLoadedJob?.isActive == true) return
@@ -1591,7 +1548,7 @@ class ChatViewModel @Inject constructor(
                 modelLifecycleManager.activateModelSafely(
                     modelId = model.id,
                     options = ActivationOptions(source = ActivationSource.AUTO_RESTORE)
-                )
+                ).getOrThrow()
             } catch (e: Exception) {
                 if (com.tk854.localmind.BuildConfig.DEBUG) android.util.Log.w("LocalMind", "Auto-load model failed: ${e.message}")
             } finally {
@@ -1616,41 +1573,6 @@ class ChatViewModel @Inject constructor(
 
     fun clearError() {
         _state.update { it.copy(error = null) }
-    }
-
-    private fun resolveDynamicContext(mode: PersonaContextMode, context: Context): String {
-        if (mode == PersonaContextMode.NONE) return ""
-
-        // PERF FIX: Timestamp ko minute-level par truncate karo, second nahi.
-        // Exact time (h:mm:ss) har message pe system prompt change karta tha â€”
-        // iska matlab prefix cache har baar invalidate ho jaata tha = full reprefill = high TTFT.
-        // Minute-level truncation se same-minute ke messages cache reuse kar sakte hain.
-        val dateFormat = java.text.SimpleDateFormat("EEEE, MMMM d, yyyy", java.util.Locale.getDefault())
-        // Hour-only truncation: cache 60 minutes tak valid rehta hai
-        val hourFormat = java.text.SimpleDateFormat("h a", java.util.Locale.getDefault())
-        val now = java.util.Date()
-        val dateStr = dateFormat.format(now)
-        // Use hour-only for system prompt (stable) â€” exact time user message mein add karo agar zaroori ho
-        val hourStr = hourFormat.format(now)
-
-        val builder = StringBuilder()
-        builder.append("CURRENT DATE: $dateStr\n")
-        builder.append("APPROXIMATE TIME: $hourStr\n")  // hour-level = prefix cache stable
-
-        if (mode == PersonaContextMode.FULL) {
-             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-             val batteryLevel = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-             val isCharging = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                 batteryManager.isCharging
-             } else {
-                 false
-             }
-             // Battery level bhi round karo 10% increments mein â€” cache stability ke liye
-             val roundedBattery = (batteryLevel / 10) * 10
-             builder.append("DEVICE BATTERY: ~$roundedBattery%${if (isCharging) " (Charging)" else ""}\n")
-        }
-
-        return builder.toString()
     }
 
     override fun onCleared() {
@@ -1760,8 +1682,6 @@ data class ChatState(
     val showThinkingToggle: Boolean = false,
     val error: String? = null,
     val attachments: List<Attachment> = emptyList(),
-    val availablePersonas: List<Persona> = emptyList(),
-    val selectedPersona: Persona? = null,
     val lastPerfMetrics: PerfMetrics? = null,
     val streamingTelemetry: InferenceTelemetry? = null,
     val downloadedModels: List<Model> = emptyList(),

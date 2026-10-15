@@ -35,45 +35,45 @@ object TemplateCatalog {
         TEMPLATE_LLAMA3 to TemplateSpec(
             id = TEMPLATE_LLAMA3,
             family = TemplateFamily.LLAMA3,
-            defaultSystemPrompt = "", // PERF: no default â€” persona se aata hai
+            defaultSystemPrompt = "", // PERF: no default  —  persona se aata hai
             defaultStopTokens = listOf("<|eot_id|>", "<|end_of_text|>")
         ),
         TEMPLATE_LLAMA32 to TemplateSpec(
             id = TEMPLATE_LLAMA32,
             family = TemplateFamily.LLAMA3,
-            defaultSystemPrompt = "", // PERF: no default â€” persona se aata hai
+            defaultSystemPrompt = "", // PERF: no default  —  persona se aata hai
             // Llama-3.2 kadhi kadhi Gemma-style tags bhi generate karta hai
             defaultStopTokens = listOf("<|eot_id|>", "<|end_of_text|>", "<start_of_turn>", "</start_of_turn>", "<end_of_turn>")
         ),
         TEMPLATE_PHI3 to TemplateSpec(
             id = TEMPLATE_PHI3,
             family = TemplateFamily.PHI3,
-            defaultSystemPrompt = "", // PERF: no default â€” persona se aata hai
+            defaultSystemPrompt = "", // PERF: no default  —  persona se aata hai
             defaultStopTokens = listOf("<|end|>")
         ),
         TEMPLATE_QWEN2 to TemplateSpec(
             id = TEMPLATE_QWEN2,
             family = TemplateFamily.QWEN,
-            defaultSystemPrompt = "", // PERF: no default â€” persona se aata hai
+            defaultSystemPrompt = "", // PERF: no default  —  persona se aata hai
             defaultStopTokens = listOf("<|im_end|>", "<|endoftext|>")
         ),
         TEMPLATE_QWEN25 to TemplateSpec(
             id = TEMPLATE_QWEN25,
             family = TemplateFamily.QWEN,
-            defaultSystemPrompt = "", // PERF: no default â€” persona se aata hai
+            defaultSystemPrompt = "", // PERF: no default  —  persona se aata hai
             defaultStopTokens = listOf("<|im_end|>", "<|endoftext|>")
         ),
         TEMPLATE_GEMMA to TemplateSpec(
             id = TEMPLATE_GEMMA,
             family = TemplateFamily.GEMMA,
-            defaultSystemPrompt = "", // PERF: no default â€” persona se aata hai
+            defaultSystemPrompt = "", // PERF: no default  —  persona se aata hai
             // POCKETPAL FIX: Complete Gemma stop tokens
             defaultStopTokens = listOf("<end_of_turn>", "<|end_of_text|>", "<eos>", "<|endoftext|>")
         ),
         TEMPLATE_GEMMA2 to TemplateSpec(
             id = TEMPLATE_GEMMA2,
             family = TemplateFamily.GEMMA,
-            defaultSystemPrompt = "", // PERF: no default â€” persona se aata hai
+            defaultSystemPrompt = "", // PERF: no default  —  persona se aata hai
             // POCKETPAL FIX: Complete Gemma2 stop tokens
             defaultStopTokens = listOf("<end_of_turn>", "<|end_of_text|>", "<eos>", "<|endoftext|>")
         ),
@@ -86,14 +86,14 @@ object TemplateCatalog {
         TEMPLATE_CHATML_DEFAULT to TemplateSpec(
             id = TEMPLATE_CHATML_DEFAULT,
             family = TemplateFamily.CHATML,
-            defaultSystemPrompt = "", // PERF: no default â€” persona se aata hai
+            defaultSystemPrompt = "", // PERF: no default  —  persona se aata hai
             defaultStopTokens = listOf("<|im_end|>", "</s>")
         ),
         // POCKETPAL FIX: DeepSeek-R1 reasoning model support
         TEMPLATE_DEEPSEEK_R1 to TemplateSpec(
             id = TEMPLATE_DEEPSEEK_R1,
             family = TemplateFamily.DEEPSEEK,
-            defaultSystemPrompt = "", // PERF: no default â€” persona se aata hai
+            defaultSystemPrompt = "", // PERF: no default  —  persona se aata hai
             // DeepSeek R1 Qwen-based: Qwen2 tokenizer EOS tokens
             // FIX: "end of sentence" aur spaced variants add karo
             // Image mein ye stop tokens response mein leak ho rahe the.
@@ -103,15 +103,15 @@ object TemplateCatalog {
                 "<|endoftext|>",
                 "</s>",
                 "<|end_of_sentence|>",  // DeepSeek V3 / R1 standard
-                "<ï½œendâ–ofâ–sentenceï½œ>",  // DeepSeek special unicode variant
-                "<|end of sentence|>"    // Spaced variant (seen in some distills)
+                "\uFF5Cend\u2581of\u2581sentence\uFF5C",
+                "<|end of sentence|>"
             )
         ),
         // POCKETPAL FIX: QwQ reasoning model support
         TEMPLATE_QWQ to TemplateSpec(
             id = TEMPLATE_QWQ,
             family = TemplateFamily.QWQ,
-            defaultSystemPrompt = "", // PERF: no default â€” persona se aata hai
+            defaultSystemPrompt = "", // PERF: no default  —  persona se aata hai
             defaultStopTokens = listOf("<|im_end|>", "</s>", "<|endoftext|>")
         )
     )
@@ -135,7 +135,7 @@ object TemplateCatalog {
         "<|return|>",
         // FIX: DeepSeek stop token variants
         "<|end_of_sentence|>",
-        "<ï½œendâ–ofâ–sentenceï½œ>",
+        "\uFF5Cend\u2581of\u2581sentence\uFF5C",
         "<|end of sentence|>"
     )
 

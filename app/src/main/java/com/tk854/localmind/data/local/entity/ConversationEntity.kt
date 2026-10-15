@@ -25,7 +25,7 @@ data class ConversationEntity(
     val isHidden: Boolean = false,
     // PocketPal WatermelonDB parity: structured metadata
     val isPinned: Boolean = false,           // Pin conversation to top
-    val personaId: String? = null,           // FK â†’ personas.id (soft ref, no FK constraint)
+    val personaId: String? = null,           // FK → personas.id (soft ref, no FK constraint)
     val totalTokens: Int = 0,                // Running total of token usage
     val lastMessagePreview: String? = null,  // Cached last message text (< 120 chars)
     val lastMessageRole: String? = null      // "user" or "assistant"

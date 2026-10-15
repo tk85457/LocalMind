@@ -22,7 +22,7 @@ class DownloadActionReceiver : BroadcastReceiver() {
         if (intent.action == ACTION_CANCEL_DOWNLOAD) {
             val modelId = intent.getStringExtra(EXTRA_MODEL_ID)
             if (!modelId.isNullOrBlank()) {
-                // SECURITY FIX: modelId NOT logged in release builds â€” could leak model path info
+                // SECURITY FIX: modelId NOT logged in release builds  —  could leak model path info
                 SecureLogger.i("LocalMind-Receiver", "Received cancel request for model")
                 val pendingResult = goAsync()
                 val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

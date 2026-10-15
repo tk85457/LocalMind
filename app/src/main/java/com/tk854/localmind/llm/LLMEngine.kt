@@ -70,7 +70,7 @@ class LLMEngine @Inject constructor(
 
     // PERF FIX: cachePrompt aur penaltyLastN ko in-memory cache karo.
     // Pehle ye HAR generation call pe DataStore se read hote the (disk I/O).
-    // PocketPal mein ye MobX in-memory observable mein store hote hain â€” zero disk reads.
+    // PocketPal mein ye MobX in-memory observable mein store hote hain  —  zero disk reads.
     // Ab ek baar read karo, phir in-memory value use karo.
     @Volatile private var cachedCachePrompt: Boolean = true
     @Volatile private var cachedPenaltyLastN: Int = 64
@@ -93,7 +93,7 @@ class LLMEngine @Inject constructor(
         }
     }
 
-    // FIX #5: LLMEngine ka apna telemetry store â€” HybridInferenceRouter bypass hone par
+    // FIX #5: LLMEngine ka apna telemetry store  —  HybridInferenceRouter bypass hone par
     // ChatRepository.getLastInferenceTelemetry() is se read karta hai.
     @Volatile private var lastDirectTelemetry: InferenceTelemetry? = null
 
@@ -106,19 +106,19 @@ class LLMEngine @Inject constructor(
 
     // AUTO-DETECTED stop tokens from model's vocab + chat template.
     // Populated once after model load via getStopTokensFromModel() JNI call.
-    // Used in generate() and generateWithMessages() calls â€” merged with config.stopTokens.
-    // Zero hardcoding â€” works for ANY model: Llama-3, Qwen, Gemma, DeepSeek, Phi, Mistral, etc.
+    // Used in generate() and generateWithMessages() calls  —  merged with config.stopTokens.
+    // Zero hardcoding  —  works for ANY model: Llama-3, Qwen, Gemma, DeepSeek, Phi, Mistral, etc.
     @Volatile var autoDetectedStopTokens: List<String> = emptyList()
         private set
 
     // PERF FIX: Pre-computed merged stop token list.
     // Previously, every generate() call did (config.stopTokens + autoDetected).map{}.filter{}.distinct()
     // creating new list objects on the hot path. Now auto-detected tokens are pre-cleaned
-    // and cached â€” only merged with config.stopTokens at call time (cheap concat + distinct).
+    // and cached  —  only merged with config.stopTokens at call time (cheap concat + distinct).
     @Volatile private var cleanedAutoStopTokens: List<String> = emptyList()
 
     /**
-     * Fully dynamic stop token detection â€” no hardcoded lists.
+     * Fully dynamic stop token detection  —  no hardcoded lists.
      * Calls getStopTokensFromModel() JNI which does 2-layer detection:
      *   Layer 1: EOS + EOT vocab IDs (llama_vocab_eos / llama_vocab_eot)
      *   Layer 2: Chat template scan for quoted markers (<|eot_id|>, <|im_end|>, etc.)
@@ -131,7 +131,7 @@ class LLMEngine @Inject constructor(
                 val raw = runCatching { bridge.getStopTokensFromModel(contextPtr) }.getOrElse { "" }
                 val detected = parseAutoStopTokens(raw)
                 autoDetectedStopTokens = detected
-                // PERF FIX: Pre-clean auto-detected tokens once â€” avoid map/filter/trim per generation call
+                // PERF FIX: Pre-clean auto-detected tokens once  —  avoid map/filter/trim per generation call
                 cleanedAutoStopTokens = detected.map { it.trim() }.filter { it.isNotBlank() }.distinct()
                 Log.i(TAG, "AutoStopTokens: detected ${detected.size} tokens: $detected")
             } catch (e: Exception) {
@@ -180,9 +180,9 @@ class LLMEngine @Inject constructor(
     )
 
     /**
-     * PocketPal-style: Model load ke baad chat template scan karo ï¿½ <think> token hai toh thinking supported.
+     * PocketPal-style: Model load ke baad chat template scan karo → <think> token hai toh thinking supported.
      * Same logic jaise PocketPal ka thinkingCapabilityDetection.ts + updateModelThinkingCapabilities().
-     * Result _thinkingSupported flow mein emit hota hai ï¿½ ChatViewModel collect karta hai aur DB update karta hai.
+     * Result _thinkingSupported flow mein emit hota hai → ChatViewModel collect karta hai aur DB update karta hai.
      */
     private fun detectThinkingSupport(contextPtr: Long) {
         scope.launch(Dispatchers.IO) {
@@ -210,18 +210,11 @@ class LLMEngine @Inject constructor(
         }
     }
 
-    private val inferenceChannel = Channel<InferenceRequest>(
-        capacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var draftModelLoaded = false
 
     init {
         context.registerComponentCallbacks(this)
-        scope.launch { processInferenceQueue() }
-        startSettingsCache()  // PERF FIX: start in-memory settings cache
+        startSettingsCache()  // start in-memory settings cache
     }
 
     companion object {
@@ -241,7 +234,7 @@ class LLMEngine @Inject constructor(
         val prefillThreads: Int,
         val label: String,
         // POCKETPAL FIX: Per-attempt KV cache type override.
-        // Vision models (SmolVLM2 etc.) need F16 â€” Q8_0 se llama_init_from_model fail hota hai.
+        // Vision models (SmolVLM2 etc.) need F16  —  Q8_0 se llama_init_from_model fail hota hai.
         // Normal text models ke liye null = user settings follow karo.
         val keyCacheTypeOverride: String? = null,
         val valueCacheTypeOverride: String? = null
@@ -322,7 +315,7 @@ class LLMEngine @Inject constructor(
             val useMmapSetting = settingsRepository.useMmap.first()
 
             // POCKETPAL FIX: Smart MMAP Auto-Toggle
-            // Q4_0 aur IQ4_NL quantizations "repackable" hain â€” llama.cpp inhe
+            // Q4_0 aur IQ4_NL quantizations "repackable" hain  —  llama.cpp inhe
             // MMAP se load karke internally repack karta hai. Is process mein
             // MMAP file + repacked buffer dono RAM mein hote hain = 2x memory.
             // Solution: aise models ke liye MMAP disable karo (direct load karo).
@@ -343,7 +336,7 @@ class LLMEngine @Inject constructor(
                 }
                 memoryMapping == "None" -> false
                 isRepackableQuant -> {
-                    Log.i(TAG, "Smart MMAP: Repackable quant detected ($quantizationHint) â€” disabling mmap to save RAM")
+                    Log.i(TAG, "Smart MMAP: Repackable quant detected ($quantizationHint) — disabling mmap to save RAM")
                     false  // Q4_0/IQ4_NL: mmap disable
                 }
                 else -> useMmapSetting  // Q4_K_M, Q8_0, etc: user setting follow karo
@@ -357,13 +350,13 @@ class LLMEngine @Inject constructor(
             val physicalBatchSize = settingsRepository.physicalBatchSize.first().coerceAtLeast(1)
             val flashAttention = settingsRepository.flashAttention.first()
 
-            // POCKETPAL FIX: Hardware GPU check â€” Adreno + i8mm + dotprod teeno chahiye.
+            // POCKETPAL FIX: Hardware GPU check  —  Adreno + i8mm + dotprod teeno chahiye.
             // Ek baar check karo aur cache karo (EGL call expensive hai).
             if (gpuHardwareSupported == null) {
                 val capability = gpuCapabilityChecker.checkGpuSupport()
                 gpuHardwareSupported = capability.isSupported
                 if (!capability.isSupported) {
-                    Log.i(TAG, "GPU not supported by hardware: ${capability.toLogString()} â€” forcing CPU-only")
+                    Log.i(TAG, "GPU not supported by hardware: ${capability.toLogString()} — forcing CPU-only")
                 }
             }
 
@@ -372,7 +365,7 @@ class LLMEngine @Inject constructor(
 
             // SMOLVLM2 FIX: Vision/multimodal models (VLM) Q8_0 KV cache support nahi karte.
             // llama.cpp mein cross-attention layers quantized KV cache ke saath
-            // llama_init_from_model fail karta hai â€” chahe ctx 512 kyun na ho.
+            // llama_init_from_model fail karta hai  —  chahe ctx 512 kyun na ho.
             // Fix: VLM models ke liye F16 force karo. Text-only models ke liye user setting raho.
             // VLM detection: filename mein VLM/Vision/SmolVLM/LLaVA/Qwen-VL etc. check karo.
             val modelFileName = File(modelPath).name.lowercase()
@@ -389,7 +382,7 @@ class LLMEngine @Inject constructor(
             // Vision models: F16 KV cache force karo (Q8_0/Q4 se init fail hota hai)
             // Text models: user ki setting follow karo
             val keyCacheType = if (isVisionModel) {
-                Log.i(TAG, "Vision model detected ($modelFileName) â€” forcing F16 KV cache")
+                Log.i(TAG, "Vision model detected ($modelFileName) — forcing F16 KV cache")
                 "F16"
             } else rawKeyCacheType
             val valueCacheType = if (isVisionModel) "F16" else rawValueCacheType
@@ -421,7 +414,7 @@ class LLMEngine @Inject constructor(
             val requestedGpuLayers = if (effectiveShouldAttemptGpu) {
                 if (configuredGpuLayers == -1) {
                     val totalRamGb = deviceProfileManager.currentProfile().totalRamGb
-                    // LOW-RAM FIX: 4GB pe GPU offload karo â€” ye CPU-only se 3-5x faster hai.
+                    // LOW-RAM FIX: 4GB pe GPU offload karo  —  ye CPU-only se 3-5x faster hai.
                     // GPU VRAM shared hoti hai system RAM se (Adreno architecture).
                     // Small models (< 2GB) = fully offload. Larger = partial offload.
                     val modelSizeGb = modelFileSize.toDouble() / 1e9
@@ -472,143 +465,60 @@ class LLMEngine @Inject constructor(
                     Log.i(TAG, "Skipping GPU attempt due to previous GPU initialization failure")
                 }
 
-                val safeBatchSize = (batchSize / 2).coerceIn(1, batchSize)
-                val safePhysicalBatchSize = (physicalBatchSize / 2).coerceIn(1, safeBatchSize)
-                val ultraSafeBatchSize = (batchSize / 4).coerceIn(1, safeBatchSize)
-                val ultraSafePhysicalBatchSize = (physicalBatchSize / 4).coerceIn(1, ultraSafeBatchSize)
                 val preferredPrefillThreads = tunedThreadCount.coerceAtLeast(Constants.MIN_THREADS)
                 val safePrefillThreads = (preferredPrefillThreads / 2).coerceAtLeast(Constants.MIN_THREADS)
 
-                // CRASH FIX: Context size ko progressively reduce karo agar primary fail ho.
-                // Pehle sirf batch size reduce hota tha â€” ab context bhi step-by-step kam hoga.
-                // SmolLM2-1.7B 4GB pe: 1024 ctx fail => 512 ctx => 256 ctx (minimum).
-                val ctxHalf = (tunedContextSize / 2).coerceAtLeast(256)
-                val ctxQuarter = (tunedContextSize / 4).coerceAtLeast(256)
-
-                // POCKETPAL EXACT: PocketPal ke defaults:
-                //   n_ctx=2048, n_batch=512, n_ubatch=512, n_gpu_layers=99,
-                //   cache_type_k=f16, cache_type_v=f16, kv_unified=true,
-                //   use_mmap='smart' (Q4_0/IQ4_NL pe false, baaki true)
-                //   use_mlock=false, flash_attn_type='off' (Android)
-                //
-                // VLM FIX (SmolVLM2/LLaVA etc.): F16 KV cache FORCE karo.
-                // Log mein dikh raha tha: type_k=8,type_v=8 (Q8_0) se ctx init fail.
-                // PocketPal ka default bhi F16 hai â€” humne Q8_0 set kiya tha jo galat tha.
-                // Ab isVisionModel flag se detect karke F16 override karte hain.
                 val vlmCacheK = if (isVisionModel) "F16" else keyCacheType
                 val vlmCacheV = if (isVisionModel) "F16" else valueCacheType
 
                 val loadAttempts = buildList {
-                    // Attempt 1: Primary (GPU agar available) â€” PocketPal defaults
-                    gpuLayerCandidates.forEachIndexed { index, candidateGpuLayers ->
+                    // Attempt 1: Target GPU configuration if hardware supported and requested
+                    if (requestedGpuLayers > 0 && hardwareAllowsGpu) {
                         add(
                             NativeLoadAttempt(
-                                gpuLayers = candidateGpuLayers,
-                                contextSize = tunedContextSize,       // PocketPal: n_ctx=2048 default
-                                useMlock = allowMlock,                // PocketPal: use_mlock=false default
-                                useMmap = useMmap,                    // PocketPal: smart mmap
-                                batchSize = batchSize,                // PocketPal: n_batch=512
-                                physicalBatchSize = physicalBatchSize, // PocketPal: n_ubatch=512
+                                gpuLayers = requestedGpuLayers,
+                                contextSize = tunedContextSize,
+                                useMlock = allowMlock,
+                                useMmap = useMmap,
+                                batchSize = batchSize,
+                                physicalBatchSize = physicalBatchSize,
                                 prefillThreads = preferredPrefillThreads,
-                                label = if (candidateGpuLayers > 0 && index == 0) "gpu-primary" else "cpu-primary",
-                                keyCacheTypeOverride = vlmCacheK,     // VLM: F16 force
+                                label = "gpu-primary",
+                                keyCacheTypeOverride = vlmCacheK,
                                 valueCacheTypeOverride = vlmCacheV
                             )
                         )
                     }
-                    // Attempt 2: CPU, safe batch (n_batch/2)
+                    // Primary CPU attempt
                     add(
                         NativeLoadAttempt(
                             gpuLayers = 0,
                             contextSize = tunedContextSize,
+                            useMlock = allowMlock,
+                            useMmap = useMmap,
+                            batchSize = batchSize,
+                            physicalBatchSize = physicalBatchSize,
+                            prefillThreads = preferredPrefillThreads,
+                            label = "cpu-primary",
+                            keyCacheTypeOverride = vlmCacheK,
+                            valueCacheTypeOverride = vlmCacheV
+                        )
+                    )
+                    // Safe Fallback: conservative context & batch for constrained devices
+                    add(
+                        NativeLoadAttempt(
+                            gpuLayers = 0,
+                            contextSize = tunedContextSize.coerceAtMost(1024).coerceAtLeast(256),
                             useMlock = false,
                             useMmap = useMmap,
-                            batchSize = safeBatchSize,
-                            physicalBatchSize = safePhysicalBatchSize,
+                            batchSize = 256,
+                            physicalBatchSize = 256,
                             prefillThreads = safePrefillThreads,
                             label = "cpu-safe",
                             keyCacheTypeOverride = vlmCacheK,
                             valueCacheTypeOverride = vlmCacheV
                         )
                     )
-                    // Attempt 3: CPU, ultra-safe batch (n_batch/4)
-                    add(
-                        NativeLoadAttempt(
-                            gpuLayers = 0,
-                            contextSize = tunedContextSize,
-                            useMlock = false,
-                            useMmap = useMmap,
-                            batchSize = ultraSafeBatchSize,
-                            physicalBatchSize = ultraSafePhysicalBatchSize,
-                            prefillThreads = (tunedThreadCount / 2).coerceAtLeast(Constants.MIN_THREADS),
-                            label = "cpu-ultra-safe",
-                            keyCacheTypeOverride = vlmCacheK,
-                            valueCacheTypeOverride = vlmCacheV
-                        )
-                    )
-                    // Attempt 4: Half context (ctx/2) â€” KV cache RAM half ho jaata hai
-                    add(
-                        NativeLoadAttempt(
-                            gpuLayers = 0,
-                            contextSize = ctxHalf,
-                            useMlock = false,
-                            useMmap = useMmap,
-                            batchSize = safeBatchSize,
-                            physicalBatchSize = safePhysicalBatchSize,
-                            prefillThreads = safePrefillThreads,
-                            label = "cpu-ctx-half",
-                            keyCacheTypeOverride = vlmCacheK,
-                            valueCacheTypeOverride = vlmCacheV
-                        )
-                    )
-                    // Attempt 5: Half context + no mmap
-                    add(
-                        NativeLoadAttempt(
-                            gpuLayers = 0,
-                            contextSize = ctxHalf,
-                            useMlock = false,
-                            useMmap = false,
-                            batchSize = ultraSafeBatchSize,
-                            physicalBatchSize = ultraSafePhysicalBatchSize,
-                            prefillThreads = safePrefillThreads,
-                            label = "cpu-ctx-half-no-mmap",
-                            keyCacheTypeOverride = vlmCacheK,
-                            valueCacheTypeOverride = vlmCacheV
-                        )
-                    )
-                    // Attempt 6: Quarter context â€” minimum viable
-                    add(
-                        NativeLoadAttempt(
-                            gpuLayers = 0,
-                            contextSize = ctxQuarter,
-                            useMlock = false,
-                            useMmap = false,
-                            batchSize = ultraSafeBatchSize,
-                            physicalBatchSize = ultraSafePhysicalBatchSize,
-                            prefillThreads = safePrefillThreads,
-                            label = "cpu-ctx-quarter-no-mmap",
-                            keyCacheTypeOverride = vlmCacheK,
-                            valueCacheTypeOverride = vlmCacheV
-                        )
-                    )
-                    // Attempt 7: VISION MODEL LAST RESORT â€” min ctx (256) + F16 + no mmap
-                    // Ye sirf VLM ke liye hai. Text models pe ye duplicate hoga (distinctBy remove karega).
-                    if (isVisionModel) {
-                        add(
-                            NativeLoadAttempt(
-                                gpuLayers = 0,
-                                contextSize = 256,
-                                useMlock = false,
-                                useMmap = false,
-                                batchSize = 64,
-                                physicalBatchSize = 32,
-                                prefillThreads = safePrefillThreads,
-                                label = "vlm-minimum",
-                                keyCacheTypeOverride = "F16",
-                                valueCacheTypeOverride = "F16"
-                            )
-                        )
-                    }
                 }.distinctBy {
                     listOf(
                         it.gpuLayers,
@@ -683,7 +593,7 @@ class LLMEngine @Inject constructor(
                 if (loadedPtr == 0L) {
                     // CRASH FIX: Agar sab attempts fail hue toh RAM issue hai.
                     // User ko clear actionable message do.
-                    // BUG FIX: Fresh RAM measurement lo â€” cached value stale hoti hai
+                    // BUG FIX: Fresh RAM measurement lo  —  cached value stale hoti hai
                     val freshMemInfo = ActivityManager.MemoryInfo().also { activityManager.getMemoryInfo(it) }
                     val availRamMb = freshMemInfo.availMem / (1024 * 1024)
                     val modelSizeMb = modelFileSize / (1024 * 1024)
@@ -702,7 +612,7 @@ class LLMEngine @Inject constructor(
                 pendingDescriptor = null
 
                 // POCKETPAL FIX #3: Model load ke baad EOS token + chat template se
-                // stop tokens auto-detect karo â€” same as PocketPal updateModelStopTokens().
+                // stop tokens auto-detect karo  —  same as PocketPal updateModelStopTokens().
                 // Ye generics models ka actual EOS token detect karta hai (e.g. Llama's <|eot_id|>,
                 // Qwen's <|im_end|>, DeepSeek's </s>) aur InferenceConfig ke stopTokens mein inject karta hai.
                 updateAutoStopTokens(loadedPtr)
@@ -749,7 +659,7 @@ class LLMEngine @Inject constructor(
     }
 
     /**
-     * Load an MMProj (Vision) model â€” PocketPal-style projector loading.
+     * Load an MMProj (Vision) model  —  PocketPal-style projector loading.
      * Requires main model to be loaded first (currentContextPtr != 0).
      */
     suspend fun loadProjector(projectorPath: String): Result<Unit> = withContext(Dispatchers.IO) {
@@ -795,7 +705,7 @@ class LLMEngine @Inject constructor(
      */
     suspend fun processImage(@Suppress("UNUSED_PARAMETER") imageBytes: ByteArray): Result<Unit> = withContext(Dispatchers.IO) {
         // Image processing is handled inline in generateWithVision (via JNI bridge).
-        // This method is a no-op placeholder â€” actual image injection happens in generateWithVision call.
+        // This method is a no-op placeholder  —  actual image injection happens in generateWithVision call.
         if (currentContextPtr == 0L) {
             return@withContext Result.failure(Exception("No model loaded"))
         }
@@ -852,7 +762,7 @@ class LLMEngine @Inject constructor(
         for (msg in historyMessages) {
             val role = if (msg.role == com.tk854.localmind.domain.model.MessageRole.USER) "user" else "assistant"
             // FIX: Assistant messages se <think> blocks HAMESHA strip karo (for past history).
-            // Reasoning text sirf UI (ThinkingBubble) ke liye hai â€” model ko wapas nahi milna chahiye.
+            // Reasoning text sirf UI (ThinkingBubble) ke liye hai  —  model ko wapas nahi milna chahiye.
             // Lekin agar hum CONTINUATION (refill) kar rahe hain, toh latest partial response wapas dena hoga.
             val cleanContent = if (role == "assistant") {
                 msg.content
@@ -882,7 +792,7 @@ class LLMEngine @Inject constructor(
     /**
      * POCKETPAL PARITY: Generate using native chat template (messages API).
      * Kotlin builds a structured messages JSON, C++ applies the model's own GGUF
-     * chat template via llm_chat_apply_template() â€” same as PocketPal's jinja=true.
+     * chat template via llm_chat_apply_template()  —  same as PocketPal's jinja=true.
      */
     fun generateWithMessages(
         messagesJson: String,
@@ -924,7 +834,7 @@ class LLMEngine @Inject constructor(
         }
         contextPtr = currentContextPtr
 
-        fun releaseLock() { /* No-op: mutex nahi pakdi â€” C++ is_generating flag se protection */ }
+        fun releaseLock() { /* No-op: mutex nahi pakdi  —  C++ is_generating flag se protection */ }
 
         if (contextPtr == 0L) {
             emitResult(GenerationResult.Error("No model loaded"))
@@ -1078,16 +988,16 @@ class LLMEngine @Inject constructor(
         // Iska matlab: agar pehli generation chal rahi ho toh doosri 9s wait karti thi mutex ke liye.
         // New approach: sirf contextPtr safely read karo, phir mutex release karo.
         // Generation ke dauran isGenerating flag aur should_stop C++ flag protection dete hain.
-        // Ye PocketPal ke approach se match karta hai â€” wahan koi Kotlin-level mutex nahi hai.
+        // Ye PocketPal ke approach se match karta hai  —  wahan koi Kotlin-level mutex nahi hai.
 
         // Agar mutex locked hai (model load ho raha hai), short wait karo
         val modelLoadWaitMs = 30_000L
         val contextPtr: Long
         if (engineMutex.isLocked) {
-            // Model abhi load ho raha hai â€” wait karo phir context read karo
+            // Model abhi load ho raha hai  —  wait karo phir context read karo
             val waitResult = withTimeoutOrNull(modelLoadWaitMs) {
                 engineMutex.lock()
-                engineMutex.unlock()  // Turant release â€” sirf ensure karo load complete hua
+                engineMutex.unlock()  // Turant release  —  sirf ensure karo load complete hua
                 true
             }
             if (waitResult == null) {
@@ -1098,7 +1008,7 @@ class LLMEngine @Inject constructor(
         }
         contextPtr = currentContextPtr
 
-        // Mutex generation ke dauran nahi pakdi â€” sirf ek dummy releaseLock() rakhte hain
+        // Mutex generation ke dauran nahi pakdi  —  sirf ek dummy releaseLock() rakhte hain
         // compatibility ke liye (invokeOnCompletion mein call hoga)
         fun releaseLock() { /* No-op: mutex nahi pakdi */ }
 
@@ -1227,99 +1137,6 @@ class LLMEngine @Inject constructor(
         }
     }.flowOn(Dispatchers.IO)
 
-    data class InferenceRequest(
-        val prompt: String,
-        val params: InferenceConfig,
-        val onToken: (String) -> Unit,
-        val onComplete: () -> Unit,
-        val onError: (Exception) -> Unit
-    )
-
-    private suspend fun processInferenceQueue() {
-        for (request in inferenceChannel) {
-            try {
-                runInference(request)
-            } catch (e: Exception) {
-                request.onError(e)
-            }
-        }
-    }
-
-    fun generate(
-        prompt: String,
-        params: InferenceConfig,
-        onToken: (String) -> Unit,
-        onComplete: () -> Unit,
-        onError: (Exception) -> Unit
-    ) {
-        inferenceChannel.trySend(
-            InferenceRequest(prompt, params, onToken, onComplete, onError)
-        )
-    }
-
-    private suspend fun runInference(request: InferenceRequest) = withContext(Dispatchers.IO) {
-        if (draftModelLoaded && deviceProfileManager.isSpeculativeDecodingSupported()) {
-            bridge.generateSpeculative(
-                currentContextPtr,
-                request.prompt,
-                stopTokens = request.params.stopTokens.toTypedArray(),
-                request.params.maxTokens,
-                nDraft = 4,
-                callback = object : com.tk854.localmind.llm.nativelib.GenerationCallback {
-                    override fun onToken(token: String) {
-                        request.onToken(token)
-                    }
-                    override fun onComplete() {
-                        // Will be called in the outer scope
-                    }
-                    override fun onError(error: String) {
-                        request.onError(Exception(error))
-                    }
-                }
-            )
-        } else {
-            bridge.generate(
-            contextPtr = currentContextPtr,
-            prompt = request.prompt,
-            stopTokens = request.params.stopTokens.toTypedArray(),
-            temperature = request.params.temperature,
-            topP = request.params.topP,
-            topK = request.params.topK,
-            repeatPenalty = request.params.repeatPenalty,
-            penaltyLastN = cachedPenaltyLastN,  // PERF FIX: cached value
-            maxTokens = request.params.maxTokens,
-            shouldUpdateCache = true,
-            cachePrompt = cachedCachePrompt,  // PERF FIX: cached value
-            defragThreshold = cachedDefragThreshold,  // PERF FIX: cached value
-                minP = request.params.minP,
-                seed = request.params.seed,
-                // PocketPal parity: new sampler params
-                xtcThreshold = request.params.xtcThreshold,
-                xtcProbability = request.params.xtcProbability,
-                typicalP = request.params.typicalP,
-                penaltyFreq = request.params.penaltyFreq,
-                penaltyPresent = request.params.penaltyPresent,
-                mirostat = request.params.mirostat,
-                mirostatTau = request.params.mirostatTau,
-                mirostatEta = request.params.mirostatEta,
-                callback = object : com.tk854.localmind.llm.nativelib.GenerationCallback {
-                    override fun onToken(token: String) {
-                        request.onToken(token)
-                    }
-                    override fun onComplete() {
-                        // Will be called in the outer scope
-                    }
-                    override fun onError(error: String) {
-                        request.onError(Exception(error))
-                    }
-                }
-            )
-        }
-        withContext(Dispatchers.Main) {
-            request.onComplete()
-        }
-    }
-
     /**
      * Stop ongoing generation
      */
@@ -1327,7 +1144,7 @@ class LLMEngine @Inject constructor(
         val contextPtr = currentContextPtr
         if (contextPtr != 0L) {
             // NOTE: resetPrefixCacheOnNextGenerate = false intentionally.
-            // Agar stop ke baad dobara generate karo toh prefix cache valid rehta hai â€”
+            // Agar stop ke baad dobara generate karo toh prefix cache valid rehta hai  — 
             // sirf context switch (naya conversation) pe cache clear karo.
             // Purana bug: har stop pe cache clear hota tha = har send pe full reprefill = high TTFT.
             runCatching { bridge.stopGeneration(contextPtr) }
@@ -1340,13 +1157,13 @@ class LLMEngine @Inject constructor(
     /**
      * TTFT FIX v2: Mutex ab generation ke dauran hold nahi hoti.
      * Ye function sirf model LOAD ke dauran wait karta hai.
-     * (generate() Flow ab mutex-free hai â€” C++ is_generating flag se protected hai.)
+     * (generate() Flow ab mutex-free hai  —  C++ is_generating flag se protected hai.)
      */
     fun isMutexLocked(): Boolean = engineMutex.isLocked
 
     suspend fun waitForMutexRelease(timeoutMs: Long = 3_000L) {
         if (!engineMutex.isLocked) return
-        // Model load ho raha hai â€” wait karo
+        // Model load ho raha hai  —  wait karo
         kotlinx.coroutines.withTimeoutOrNull(timeoutMs) {
             engineMutex.lock()
             engineMutex.unlock()
@@ -1500,7 +1317,7 @@ class LLMEngine @Inject constructor(
     }
 
     private fun isValidGgufFile(path: String): Boolean {
-        // SAF models use /proc/self/fd/XX paths â€” the file is already opened via
+        // SAF models use /proc/self/fd/XX paths  —  the file is already opened via
         // a valid ParcelFileDescriptor, so skip the magic-number check.
         if (path.startsWith("/proc/self/fd/")) return true
         if (!path.endsWith(Constants.GGUF_EXTENSION, ignoreCase = true)) return false
@@ -1565,9 +1382,9 @@ private fun ParcelFileDescriptor.closeQuietly() {
  */
 sealed class GenerationResult {
     object Started : GenerationResult()
-    /** Raw answer token â€” reasoning tags already stripped */
+    /** Raw answer token  —  reasoning tags already stripped */
     data class Token(val text: String) : GenerationResult()
-    /** Reasoning/thinking token â€” extracted from <think>...</think> and variants */
+    /** Reasoning/thinking token  —  extracted from <think>...</think> and variants */
     data class Reasoning(val text: String) : GenerationResult()
     object Complete : GenerationResult()
     data class Error(val message: String) : GenerationResult()

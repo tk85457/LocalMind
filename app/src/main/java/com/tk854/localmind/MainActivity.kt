@@ -42,7 +42,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
 
-        // UI FIX: Edge-to-edge enable karo â€” Compose WindowInsets se padding handle karega.
+        // UI FIX: Edge-to-edge enable karo  —  Compose WindowInsets se padding handle karega.
         // Ye line honi CHAHIYE, warna status bar ke peeche content chhup jata hai.
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -203,7 +203,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
                         showExitDialog = true
                     }
 
-                    // Active conversation ID â€” route se extract karo
+                    // Active conversation ID  —  route se extract karo
                     val activeConvId = remember(currentRoute) {
                         navBackStackEntry?.arguments?.getString("conversationId")
                     }
@@ -215,6 +215,8 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
                         recentConversations = recentConversations,
                         activeConversationId = activeConvId,
                         onNavigate = ::safeNavigate,
+                        isDarkMode = settings.darkMode,
+                        onToggleDarkMode = { settingsViewModel.updateDarkMode(!settings.darkMode) },
                         onConversationClick = { conversationId ->
                             scope.launch {
                                 if (navigationInFlight) return@launch
@@ -371,6 +373,8 @@ fun AdaptiveAppContent(
     onConversationClick: (String) -> Unit,
     onDeleteConversation: (String) -> Unit,
     onRenameConversation: (String, String) -> Unit = { _, _ -> },
+    isDarkMode: Boolean = false,
+    onToggleDarkMode: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
     if (isExpanded) {
@@ -388,7 +392,9 @@ fun AdaptiveAppContent(
                         onNavigate = onNavigate,
                         onConversationClick = onConversationClick,
                         onDeleteConversation = onDeleteConversation,
-                        onRenameConversation = onRenameConversation
+                        onRenameConversation = onRenameConversation,
+                        isDarkMode = isDarkMode,
+                        onToggleDarkMode = onToggleDarkMode
                     )
                 }
             }
@@ -412,7 +418,9 @@ fun AdaptiveAppContent(
                         onNavigate = onNavigate,
                         onConversationClick = onConversationClick,
                         onDeleteConversation = onDeleteConversation,
-                        onRenameConversation = onRenameConversation
+                        onRenameConversation = onRenameConversation,
+                        isDarkMode = isDarkMode,
+                        onToggleDarkMode = onToggleDarkMode
                     )
                 }
             }

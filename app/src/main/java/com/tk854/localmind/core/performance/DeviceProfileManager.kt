@@ -62,7 +62,7 @@ class DeviceProfileManager @Inject constructor(
 
     // FIX #4: Cache DeviceProfile to avoid repeated Binder IPC calls.
     // activityManager.getMemoryInfo() is a Binder IPC (~1-3ms each).
-    // Cache for 5 seconds â€” device RAM doesn't change mid-sentence.
+    // Cache for 5 seconds  —  device RAM doesn't change mid-sentence.
     @Volatile private var cachedProfileValue: DeviceProfile? = null
     @Volatile private var lastProfileCacheMs: Long = 0L
     private val PROFILE_CACHE_TTL_MS = 5_000L
@@ -80,7 +80,7 @@ class DeviceProfileManager @Inject constructor(
         // 4GB phone: 2048 ctx = ~200MB KV cache + model weights = near OOM for 3B models.
         // 1024 ctx = ~100MB KV cache = fits comfortably, still handles most conversations.
         val recommendedContextSize = when {
-            totalRamGb <= 4 -> 1024  // 4GB: 1024 ctx â€” fits 1B-3B models safely
+            totalRamGb <= 4 -> 1024  // 4GB: 1024 ctx  —  fits 1B-3B models safely
             totalRamGb <= 6 -> 2048  // 6GB: 2048 ctx
             else -> 4096             // 8GB+: 4096 ctx
         }
@@ -115,7 +115,7 @@ class DeviceProfileManager @Inject constructor(
 
         val maxSupportedParamsB = when {
             totalRamGb <= 3 -> 1.5   // 3GB: sirf 1.5B model
-            totalRamGb <= 4 -> 3.0   // 4GB: max 3B model (was 4.0 â€” 4B Q4_K_M=2.7GB, OS+app le lo toh OOM)
+            totalRamGb <= 4 -> 3.0   // 4GB: max 3B model (was 4.0  —  4B Q4_K_M=2.7GB, OS+app le lo toh OOM)
             totalRamGb <= 6 -> 7.0
             else -> 13.0
         }
@@ -158,7 +158,7 @@ class DeviceProfileManager @Inject constructor(
 
         // LOW-RAM FIX: 4GB phone pe context + maxTokens dono cap karo.
         // User 8192 ctx set kar sakta hai but 4GB pe ye OOM ya extreme slowness deta hai.
-        // Hard cap lagao â€” user settings screen pe info dena better hai.
+        // Hard cap lagao  —  user settings screen pe info dena better hai.
         val maxSafeContext = when {
             profile.totalRamGb <= 4 -> 2048   // 4GB: max 2048 ctx hard cap
             profile.totalRamGb <= 6 -> 4096
@@ -305,7 +305,7 @@ class DeviceProfileManager @Inject constructor(
             )
         }
 
-        val emergencyContextSize = runCatching { runBlocking { settingsRepository.minNCtx.first() } }.getOrDefault(1024)
+        val emergencyContextSize = 1024
 
         return ActivationPlan(
             allowed = true,
@@ -330,7 +330,7 @@ class DeviceProfileManager @Inject constructor(
 
         // BUG FIX: Cached profile mein availableRamBytes STALE ho sakta hai
         // (pehle wale model ke loaded hone ke time ka). Fresh measurement lo.
-        lastProfileCacheMs = 0L  // Invalidate cache â€” fresh RAM reading force karo
+        lastProfileCacheMs = 0L  // Invalidate cache  —  fresh RAM reading force karo
         val profile = currentProfile()
         val normalizedQuant = normalizeQuantization(quantizationHint, modelNameHint)
         val parameterCountB = parseParameterCountB(parameterCountHint ?: modelNameHint)
@@ -338,9 +338,9 @@ class DeviceProfileManager @Inject constructor(
         // Q4_K_M model size guide: 1B=~700MB, 2B=~1.4GB, 3B=~2.0GB, 4B=~2.7GB (too big)
         // Q8_0 aur Q6 aur bhi zyada RAM lete hain, isliye 4GB pe inhe aur restrict karo.
         // POCKETPAL FIX: Q8_0 ke 1B model (1.23GB) ko 4GB pe block mat karo.
-        // PocketPal koi quant-based hard block nahi lagata â€” size check karta hai.
+        // PocketPal koi quant-based hard block nahi lagata  —  size check karta hai.
         // Agar model 2GB se chhota hai toh 4GB pe load ATTEMPT hona chahiye.
-        // (Actual load fail ho sakta hai â€” woh LLMEngine ke progressive fallback handle karta hai.)
+        // (Actual load fail ho sakta hai  —  woh LLMEngine ke progressive fallback handle karta hai.)
         val maxAllowedSizeBytes = when {
             profile.totalRamGb <= 4 -> 2_147_483_648L  // 4GB: max 2GB model size (quant-agnostic)
             profile.totalRamGb <= 6 -> 4_294_967_296L
@@ -371,10 +371,10 @@ class DeviceProfileManager @Inject constructor(
             }
             profile.availableRamBytes < requiredWithHeadroom -> {
                 // BUG FIX: Agar model size KHUD fit hota hai available RAM mein,
-                // toh context overhead ke wajah se block mat karo â€” LLMEngine handle karega.
+                // toh context overhead ke wajah se block mat karo  —  LLMEngine handle karega.
                 // Sirf tab block karo jab model ITSELF available RAM se bada ho.
                 if (modelSizeBytes <= profile.availableRamBytes) {
-                    // Model fits but context overhead might be too much â€” allow with warning
+                    // Model fits but context overhead might be too much  —  allow with warning
                     ModelCompatibilityCheck(compatible = true)
                 } else {
                     ModelCompatibilityCheck(
@@ -407,7 +407,7 @@ class DeviceProfileManager @Inject constructor(
             val profile = currentProfile()
             if (profile.totalRamGb <= 4) {
                 tips += "4GB RAM ke liye: Q4_K_M ya Q3_K_M quantization use karo"
-                tips += "4GB phone ke liye ~2GB se chhota model choose karo (1Bâ€“2B parameter)"
+                tips += "4GB phone ke liye ~2GB se chhota model choose karo (1B–2B parameter)"
                 tips += "Recommended: Qwen2.5-1.5B-Q4_K_M (~1.0GB) ya Phi-3-mini-Q4_K_M (~2.0GB)"
             } else if (modelSizeBytes > 3 * BYTES_IN_GB && profile.totalRamGb <= 6) {
                 tips += "Try a 'Q4_K_M' or 'Q3_K_L' quantization for better reliability"
@@ -434,7 +434,7 @@ class DeviceProfileManager @Inject constructor(
     }
 
     private fun maxContextForRam(totalRamGb: Int): Int {
-        // User settings respect karo â€” no RAM-based override.
+        // User settings respect karo  —  no RAM-based override.
         // totalRamGb is logged for diagnostics only.
         if (com.tk854.localmind.BuildConfig.DEBUG) android.util.Log.d("DeviceProfile", "maxContextForRam: totalRamGb=$totalRamGb, returning uncapped")
         return 131072
@@ -477,13 +477,13 @@ class DeviceProfileManager @Inject constructor(
 
     companion object {
         private const val BYTES_IN_GB = 1024 * 1024 * 1024L
-        // PERF FIX: Was 131072 (128KB per token!) â€” completely wrong.
+        // PERF FIX: Was 131072 (128KB per token!)  —  completely wrong.
         // Real KV cache per token for Q8_0 = ~512 bytes.
-        // Old value caused phantom OOM â†’ emergency slow mode on every device.
+        // Old value caused phantom OOM → emergency slow mode on every device.
         private const val CONTEXT_TOKEN_BYTES = 512L
         private const val SAFETY_HEADROOM_FACTOR = 1.10
         private const val FORCE_HEADROOM_FACTOR = 1.05
-        private const val EMERGENCY_CONTEXT_SIZE = 256  // CRASH FIX: Was 2048 â€” minimum viable fallback
+        private const val EMERGENCY_CONTEXT_SIZE = 256  // CRASH FIX: Was 2048  —  minimum viable fallback
         private const val EMERGENCY_MAX_TOKENS = 512
 
         private val QUANT_REGEX = Regex("Q\\d+(_[A-Z0-9]+)?")

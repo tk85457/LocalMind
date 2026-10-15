@@ -17,7 +17,7 @@ import com.tk854.localmind.ui.theme.*
 import com.tk854.localmind.ui.viewmodel.SettingsState
 
 /**
- * Advanced Inference Settings Section â€” Full PocketPal completion param parity
+ * Advanced Inference Settings Section  —  Full PocketPal completion param parity
  */
 @Composable
 fun AdvancedInferenceSection(
@@ -39,7 +39,7 @@ fun AdvancedInferenceSection(
     onShowRamWarning: (String) -> Unit,
     onMinPChange: (Float) -> Unit = {},
     onSeedChange: (Int) -> Unit = {},
-    // PocketPal full parity â€” new params
+    // PocketPal full parity  —  new params
     onXtcThresholdChange: (Float) -> Unit = {},
     onXtcProbabilityChange: (Float) -> Unit = {},
     onTypicalPChange: (Float) -> Unit = {},
@@ -61,7 +61,7 @@ fun AdvancedInferenceSection(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
-            // â”€â”€â”€ GENERATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // --- GENERATION -----------------------------------------------
 
             SectionLabel("Generation")
 
@@ -95,7 +95,7 @@ fun AdvancedInferenceSection(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
 
-            // â”€â”€â”€ SAMPLING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // --- SAMPLING -------------------------------------------------
 
             SectionLabel("Sampling")
 
@@ -225,7 +225,7 @@ fun AdvancedInferenceSection(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
 
-            // â”€â”€â”€ PENALTIES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // --- PENALTIES ------------------------------------------------
 
             SectionLabel("Penalties")
 
@@ -239,7 +239,7 @@ fun AdvancedInferenceSection(
                 formatValue = { it.toInt().toString() }
             )
 
-            // Repeat Penalty (legacy repeat_penalty param â€” wired to onRepeatPenaltyChange)
+            // Repeat Penalty (legacy repeat_penalty param  —  wired to onRepeatPenaltyChange)
             RealTimeSlider(
                 title = "Repeat Penalty",
                 value = settings.repeatPenalty,
@@ -277,7 +277,7 @@ fun AdvancedInferenceSection(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
 
-            // â”€â”€â”€ MIROSTAT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // --- MIROSTAT -------------------------------------------------
 
             SectionLabel("Mirostat")
 
@@ -322,7 +322,7 @@ fun AdvancedInferenceSection(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
 
-            // â”€â”€â”€ BACKEND â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // --- BACKEND --------------------------------------------------
 
             SectionLabel("Backend / Hardware")
 
@@ -430,7 +430,7 @@ fun AdvancedInferenceSection(
     }
 }
 
-// â”€â”€â”€ Helper Composables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Helper Composables -------------------------------------------------------
 
 @Composable
 private fun SectionLabel(text: String) {

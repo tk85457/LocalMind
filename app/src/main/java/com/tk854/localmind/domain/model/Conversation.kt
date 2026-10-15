@@ -16,5 +16,5 @@ data class Conversation(
     val personaId: String? = null,           // Linked persona (WatermelonDB relation)
     val totalTokens: Int = 0,                // Total tokens used in this conversation
     val lastMessagePreview: String? = null,  // Last message preview for list display
-    val lastMessageRole: String? = null      // "user" or "assistant" â€” for list icon
+    val lastMessageRole: String? = null      // "user" or "assistant"  —  for list icon
 )

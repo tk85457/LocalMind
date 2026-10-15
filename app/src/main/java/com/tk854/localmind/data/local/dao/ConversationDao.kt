@@ -7,10 +7,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ConversationDao {
 
-    // â”€â”€â”€ Core queries â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- Core queries ----------------------------------------------------------
 
     /**
-     * All visible conversations â€” pinned first, then by updatedAt DESC.
+     * All visible conversations  —  pinned first, then by updatedAt DESC.
      * PocketPal WatermelonDB: sortBy([{column: 'is_pinned', order: 'desc'}, {column: 'updated_at', order: 'desc'}])
      */
     @Query("SELECT * FROM conversations WHERE isHidden = 0 ORDER BY isPinned DESC, updatedAt DESC")
@@ -34,7 +34,7 @@ interface ConversationDao {
     @Query("SELECT EXISTS(SELECT 1 FROM conversations WHERE id = :id)")
     suspend fun conversationExists(id: String): Boolean
 
-    // â”€â”€â”€ CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- CRUD -----------------------------------------------------------------
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertConversation(conversation: ConversationEntity)
@@ -45,7 +45,7 @@ interface ConversationDao {
     @Delete
     suspend fun deleteConversation(conversation: ConversationEntity)
 
-    // â”€â”€â”€ Targeted updates (avoid full row rewrites) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- Targeted updates (avoid full row rewrites) ----------------------------
 
     @Query("UPDATE conversations SET updatedAt = :timestamp, messageCount = messageCount + 1 WHERE id = :id")
     suspend fun incrementMessageCount(id: String, timestamp: Long)
@@ -68,7 +68,7 @@ interface ConversationDao {
     @Query("SELECT COUNT(*) FROM conversations WHERE isHidden = 0")
     suspend fun getConversationCount(): Int
 
-    // â”€â”€â”€ PocketPal WatermelonDB parity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- PocketPal WatermelonDB parity ----------------------------------------
 
     /**
      * Toggle pin status. Pinned conversations appear first in the list.
@@ -148,7 +148,7 @@ interface ConversationDao {
     """)
     suspend fun getUsageByModel(): List<ModelUsageStat>
 
-    // â”€â”€â”€ Cleanup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- Cleanup --------------------------------------------------------------
 
     @Query("DELETE FROM messages WHERE conversationId IN (SELECT id FROM conversations WHERE updatedAt < :timestamp)")
     suspend fun deleteMessagesForOldConversations(timestamp: Long)

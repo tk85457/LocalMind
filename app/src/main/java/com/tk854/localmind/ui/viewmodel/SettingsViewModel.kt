@@ -43,7 +43,7 @@ data class SettingsState(
     val memoryMapping: String = "Smart",
     val autoOffload: Boolean = false,
     val language: String = "English (EN)",
-    val darkMode: Boolean = true,
+    val darkMode: Boolean = false,
     val autoNavigateChat: Boolean = true,
     val onboardingCompleted: Boolean = false,
     val showAdvancedSettings: Boolean = false,
@@ -71,7 +71,7 @@ data class SettingsState(
     val useMmap: Boolean = SettingsRepository.DEFAULT_USE_MMAP,
     val keyCacheType: String = SettingsRepository.DEFAULT_KEY_CACHE_TYPE,
     val valueCacheType: String = SettingsRepository.DEFAULT_VALUE_CACHE_TYPE,
-    // PocketPal Completion Params ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â full parity
+    // PocketPal Completion Params  —  full parity
     val minP: Float = SettingsRepository.DEFAULT_MIN_P,
     val seed: Int = SettingsRepository.DEFAULT_SEED,
     val xtcThreshold: Float = SettingsRepository.DEFAULT_XTC_THRESHOLD,
@@ -101,13 +101,13 @@ class SettingsViewModel @Inject constructor(
 
     // STARTUP SNAPSHOT: App launch pe ek baar value lo, phir freeze karo.
     // Live flow use karne se Settings mein setOnboardingCompleted(false) karne pe
-    // runtime mein turant ONBOARDING screen show ho jaata tha Ã¢â‚¬â€ wrong behavior.
-    // Ab: pehli non-null value leke freeze kar do Ã¢â‚¬â€ restart pe hi change dikhega.
+    // runtime mein turant ONBOARDING screen show ho jaata tha  —  wrong behavior.
+    // Ab: pehli non-null value leke freeze kar do  —  restart pe hi change dikhega.
     private val _onboardingCompletedStartup = MutableStateFlow<Boolean?>(null)
     val onboardingCompletedStartup: StateFlow<Boolean?> = _onboardingCompletedStartup
 
     init {
-        // Startup pe sirf ek baar read karo Ã¢â‚¬â€ baad mein change ignore
+        // Startup pe sirf ek baar read karo  —  baad mein change ignore
         viewModelScope.launch {
             val value = repository.onboardingCompleted.first()
             _onboardingCompletedStartup.value = value
@@ -124,7 +124,7 @@ class SettingsViewModel @Inject constructor(
     private val _importExportStatus = MutableStateFlow<UiState<String>>(UiState.Idle)
     val importExportStatus = _importExportStatus.asStateFlow()
 
-    // Kotlin combine() max 16 flows ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â isliye 2 combine chains use karo + merge
+    // Kotlin combine() max 16 flows  —  isliye 2 combine chains use karo + merge
     private val _settingsPart1 = combine(
         repository.temperature,       // 0
         repository.topP,               // 1
@@ -259,7 +259,7 @@ class SettingsViewModel @Inject constructor(
     init {
         // FIX: Only call ONE initialization function. applyMaximumSpeedCaps() and
         // applyDeviceSafeDefaults() had overlapping logic writing the same DataStore
-        // keys simultaneously from two separate coroutines ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â potential DataStore write
+        // keys simultaneously from two separate coroutines  —  potential DataStore write
         // conflict and wasted double-disk-IO. Merged into a single call.
         applyDeviceSafeDefaults()
         observeAutoDelete()
@@ -728,7 +728,7 @@ class SettingsViewModel @Inject constructor(
         repository.updateSeed(value)
     }
 
-    // PocketPal full parity ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â new completion params
+    // PocketPal full parity  —  new completion params
     fun updateXtcThreshold(value: Float) = viewModelScope.launch { repository.updateXtcThreshold(value) }
     fun updateXtcProbability(value: Float) = viewModelScope.launch { repository.updateXtcProbability(value) }
     fun updateTypicalP(value: Float) = viewModelScope.launch { repository.updateTypicalP(value) }

@@ -55,10 +55,10 @@ fun TypewriterText(
                 // Now we emit in chunks instantly if falling behind, or with minimal
                 // delay for small increments to keep the smooth feel.
                 if (newChars > 8) {
-                    // Falling behind â€” snap to latest text immediately
+                    // Falling behind  —  snap to latest text immediately
                     displayedText = text
                 } else {
-                    // Small increment â€” tiny delay for smooth feel (max 1 frame)
+                    // Small increment  —  tiny delay for smooth feel (max 1 frame)
                     val boundedTypingDelay = typingSpeedMs.coerceIn(0L, 33L)
                     delay(boundedTypingDelay)
                     displayedText = text
@@ -67,7 +67,7 @@ fun TypewriterText(
                 displayedText = text
             }
         } else {
-            // Not streaming (e.g. history) â€” show immediately
+            // Not streaming (e.g. history)  —  show immediately
             displayedText = text
         }
     }

@@ -456,7 +456,7 @@ class ChatRepository @Inject constructor(
     suspend fun searchMessages(query: String, limit: Int = 50): List<Message> {
         if (query.isBlank()) return emptyList()
         return try {
-            // FTS4 query â€” sanitize to avoid SQLite FTS syntax errors
+            // FTS4 query  —  sanitize to avoid SQLite FTS syntax errors
             val ftsQuery = query.trim()
                 .replace("'", "''")
                 .replace("\"", "")
@@ -522,7 +522,7 @@ class ChatRepository @Inject constructor(
 
     /**
      * Add incremental token delta to a conversation's running total.
-     * Faster than full recalculation â€” called after each message save.
+     * Faster than full recalculation  —  called after each message save.
      */
     suspend fun addTokensToConversation(conversationId: String, tokenDelta: Int) {
         if (tokenDelta > 0) {
@@ -531,7 +531,7 @@ class ChatRepository @Inject constructor(
     }
 
     /**
-     * Get recent messages across all conversations â€” for global history view.
+     * Get recent messages across all conversations  —  for global history view.
      */
     suspend fun getRecentMessages(limit: Int = 100): List<Message> {
         return messageDao.getRecentMessages(limit).map { it.toDomain() }

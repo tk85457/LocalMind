@@ -8,7 +8,7 @@ import com.tk854.localmind.BuildConfig
  *
  * Wraps android.util.Log to ensure:
  * - Logs are ONLY emitted in DEBUG builds (BuildConfig.DEBUG = true)
- * - In RELEASE builds, all log calls are no-ops â†’ zero log output
+ * - In RELEASE builds, all log calls are no-ops → zero log output
  * - Prevents sensitive information leakage via logcat in production
  *
  * OWASP MASVS: MSTG-RESILIENCE-2 (no debug info in release)

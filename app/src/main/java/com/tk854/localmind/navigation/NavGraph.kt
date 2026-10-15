@@ -23,7 +23,6 @@ object Routes {
     const val SETTINGS = "settings"
     const val BENCHMARK_HOME = "benchmark"
     const val BENCHMARK = "benchmark/{modelId}"
-    const val PERSONA_MANAGEMENT = "persona_management"
     const val PROMPT_TEMPLATE_MANAGER = "prompt_template_manager"
 
     fun modelDetail(modelId: String): String = "model_detail/${Uri.encode(modelId)}"
@@ -55,7 +54,7 @@ fun NavGraph(
             )
         }
 
-        // Routes.CHAT alias â€” drawer se navigate karne pe crash fix
+        // Routes.CHAT alias  —  drawer se navigate karne pe crash fix
         composable(Routes.CHAT) {
             ChatScreen(
                 conversationId = null,
@@ -65,9 +64,6 @@ fun NavGraph(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
-                },
-                onNavigateToPersonaManagement = {
-                    navController.navigate(Routes.PERSONA_MANAGEMENT)
                 },
                 onNavigateToPromptTemplates = {
                     navController.navigate(Routes.PROMPT_TEMPLATE_MANAGER)
@@ -108,9 +104,6 @@ fun NavGraph(
                     }.onFailure {
                         Log.w("LocalMind-Nav", "Settings navigation failed from chat", it)
                     }
-                },
-                onNavigateToPersonaManagement = {
-                    navController.navigate(Routes.PERSONA_MANAGEMENT)
                 },
                 onNavigateToPromptTemplates = {
                     navController.navigate(Routes.PROMPT_TEMPLATE_MANAGER)
@@ -207,7 +200,6 @@ fun NavGraph(
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToPersonas = { navController.navigate(Routes.PERSONA_MANAGEMENT) },
                 onNavigateToPromptTemplates = { navController.navigate(Routes.PROMPT_TEMPLATE_MANAGER) },
                 onNavigateToOnboarding = {} // no-op: restart required, handled in SettingsScreen
             )
@@ -216,13 +208,6 @@ fun NavGraph(
         // Benchmark Home
         composable(Routes.BENCHMARK_HOME) {
             BenchmarkScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // Persona Management
-        composable(Routes.PERSONA_MANAGEMENT) {
-            PersonaManagementScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,31 +44,23 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tk854.localmind.ui.theme.NeonPrimary
-import com.tk854.localmind.ui.theme.NeonTextSecondary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// â”€â”€ Colour palette (PocketPal atomOneDark equivalent) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-private val BG_HEADER   = Color(0xFF1C1C2E)   // header bar
-private val BG_CODE     = Color(0xFF0D1117)   // code body (GitHub dark)
+// — Colour palette (PocketPal atomOneDark equivalent) ——————————————————————————
+private val BG_HEADER   = Color(0xFF2F2F2F)   // ChatGPT code header
+private val BG_CODE     = Color(0xFF171717)   // ChatGPT code body
 private val C_DEFAULT   = Color(0xFFE6EDF3)   // plain text
-private val C_KEYWORD   = Color(0xFFFF7B72)   // red  â€“ keywords
-private val C_STRING    = Color(0xFFA5D6FF)   // blue â€“ strings
-private val C_COMMENT   = Color(0xFF8B949E)   // grey â€“ comments
-private val C_NUMBER    = Color(0xFFD2A8FF)   // purple â€“ numbers
-private val C_FUNCTION  = Color(0xFFD2A8FF)   // purple â€“ function names
-private val C_TYPE      = Color(0xFFFFA657)   // orange â€“ types/annotations
-private val C_OPERATOR  = Color(0xFFFF7B72)   // red  â€“ operators
+private val C_KEYWORD   = Color(0xFFFF7B72)   // red  – keywords
+private val C_STRING    = Color(0xFFA5D6FF)   // blue – strings
+private val C_COMMENT   = Color(0xFF8B949E)   // grey – comments
+private val C_NUMBER    = Color(0xFFD2A8FF)   // purple – numbers
+private val C_FUNCTION  = Color(0xFFD2A8FF)   // purple – function names
+private val C_TYPE      = Color(0xFFFFA657)   // orange – types/annotations
+private val C_OPERATOR  = Color(0xFFFF7B72)   // red  – operators
 
 /**
- * PocketPal-style code block:
- *   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
- *   â”‚ kotlin                 [copy] â”‚   â† header bar
- *   â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
- *   â”‚ fun hello() {                  â”‚   â† syntax-highlighted, scrollable
- *   â”‚   println("hi")               â”‚
- *   â”‚ }                              â”‚
- *   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+ * ChatGPT-style code block with language header and copy button
  */
 @Composable
 fun CodeBlock(
@@ -80,7 +73,7 @@ fun CodeBlock(
     var copied  by remember { mutableStateOf(false) }
 
     val iconTint by animateColorAsState(
-        targetValue = if (copied) NeonPrimary else NeonTextSecondary,
+        targetValue = if (copied) NeonPrimary else Color(0xFFB4B4B4),
         animationSpec = tween(300),
         label = "copyIconTint"
     )
@@ -88,51 +81,63 @@ fun CodeBlock(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
     ) {
-        // â”€â”€ Header bar (language + copy button) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Header bar (language label + ChatGPT "Copy code" button)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(BG_HEADER)
-                .padding(horizontal = 12.dp, vertical = 4.dp),
+                .padding(horizontal = 14.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = language.ifBlank { "code" },
                 style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.8.sp
+                    letterSpacing = 0.5.sp
                 ),
-                color = NeonTextSecondary
+                color = Color(0xFFB4B4B4)
             )
 
-            IconButton(
-                onClick = {
-                    copyToClipboard(context, code.trim())
-                    copied = true
-                    scope.launch {
-                        delay(2000)
-                        copied = false
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable {
+                        copyToClipboard(context, code.trim())
+                        copied = true
+                        scope.launch {
+                            delay(2000)
+                            copied = false
+                        }
                     }
-                },
-                modifier = Modifier.size(32.dp)
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 Icon(
                     imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
                     contentDescription = if (copied) "Copied" else "Copy code",
                     tint = iconTint,
-                    modifier = Modifier.size(15.dp)
+                    modifier = Modifier.size(13.dp)
+                )
+                Text(
+                    text = if (copied) "Copied!" else "Copy code",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = iconTint
                 )
             }
         }
 
-        // â”€â”€ Code body (syntax-highlighted, horizontally scrollable) â”€â”€â”€â”€â”€â”€â”€â”€
-        // highlight() ko directly call karo â€” Compose khud recompose tabhi karta hai jab
+        // -- Code body (syntax-highlighted, horizontally scrollable) --------
+        // highlight() ko directly call karo  —  Compose khud recompose tabhi karta hai jab
         // code param change hota hai, isliye extra remember caching ki zaroorat nahi.
-        val highlighted = highlight(code, language)
+        val highlighted = remember(code, language) { highlight(code, language) }
 
         Box(
             modifier = Modifier
@@ -152,15 +157,15 @@ fun CodeBlock(
     }
 }
 
-// â”€â”€ Clipboard helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -- Clipboard helper --------------------------------------------------------
 private fun copyToClipboard(context: Context, text: String) {
     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     cm.setPrimaryClip(ClipData.newPlainText("code", text))
     Toast.makeText(context, "Code copied", Toast.LENGTH_SHORT).show()
 }
 
-// â”€â”€ Lightweight syntax highlighter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Pure Kotlin â€” no extra library needed.
+// -- Lightweight syntax highlighter -----------------------------------------
+// Pure Kotlin  —  no extra library needed.
 // Covers the most common tokens across Kotlin/Java/Python/JS/C/C++/Bash/JSON.
 // Returns an AnnotatedString with coloured spans.
 private fun highlight(code: String, language: String): androidx.compose.ui.text.AnnotatedString {
@@ -173,11 +178,11 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
         }
     }
 
-    // â”€â”€ Token rules (order matters â€” more specific first) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // -- Token rules (order matters  —  more specific first) ------------------
     data class Rule(val regex: Regex, val color: Color)
 
     val rules: List<Rule> = when {
-        // â”€â”€ Python â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- Python ----------------------------------------------------------
         lang == "python" || lang == "py" -> listOf(
             Rule(Regex("""#[^\n]*"""),                                     C_COMMENT),
             Rule(Regex("""\"\"\"[\s\S]*?\"\"\"|\'\'\'[\s\S]*?\'\'\'"""),   C_STRING),
@@ -188,7 +193,7 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
             Rule(Regex("""\b\d+\.?\d*\b"""),                              C_NUMBER),
         )
 
-        // â”€â”€ Kotlin / Java â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- Kotlin / Java ---------------------------------------------------
         lang in setOf("kotlin", "kt", "java") -> listOf(
             Rule(Regex("""//[^\n]*"""),                                    C_COMMENT),
             Rule(Regex("""/\*[\s\S]*?\*/"""),                             C_COMMENT),
@@ -201,7 +206,7 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
             Rule(Regex("""\b\d+[LlFfDd]?\b"""),                          C_NUMBER),
         )
 
-        // â”€â”€ JavaScript / TypeScript â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- JavaScript / TypeScript -----------------------------------------
         lang in setOf("javascript", "js", "typescript", "ts", "jsx", "tsx") -> listOf(
             Rule(Regex("""//[^\n]*"""),                                    C_COMMENT),
             Rule(Regex("""/\*[\s\S]*?\*/"""),                             C_COMMENT),
@@ -213,7 +218,7 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
             Rule(Regex("""\b\d+\.?\d*\b"""),                              C_NUMBER),
         )
 
-        // â”€â”€ C / C++ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- C / C++ ---------------------------------------------------------
         lang in setOf("c", "cpp", "c++", "h", "hpp") -> listOf(
             Rule(Regex("""//[^\n]*"""),                                    C_COMMENT),
             Rule(Regex("""/\*[\s\S]*?\*/"""),                             C_COMMENT),
@@ -224,7 +229,7 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
             Rule(Regex("""\b\d+\.?\d*[fFlL]?\b"""),                      C_NUMBER),
         )
 
-        // â”€â”€ Bash / Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- Bash / Shell ----------------------------------------------------
         lang in setOf("bash", "sh", "shell", "zsh") -> listOf(
             Rule(Regex("""#[^\n]*"""),                                     C_COMMENT),
             Rule(Regex(""""[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*'"""), C_STRING),
@@ -233,7 +238,7 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
             Rule(Regex("""\b\d+\b"""),                                    C_NUMBER),
         )
 
-        // â”€â”€ JSON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- JSON -------------------------------------------------------------
         lang == "json" -> listOf(
             Rule(Regex(""""[^"\\]*(?:\\.[^"\\]*)*"\s*:"""),               C_FUNCTION),  // keys
             Rule(Regex(""""[^"\\]*(?:\\.[^"\\]*)*""""),                    C_STRING),    // string values
@@ -241,7 +246,7 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
             Rule(Regex("""-?\d+\.?\d*([eE][+-]?\d+)?"""),                C_NUMBER),
         )
 
-        // â”€â”€ CSS / SCSS / LESS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- CSS / SCSS / LESS -------------------------------------------------
         lang in setOf("css", "scss", "less", "sass") -> listOf(
             Rule(Regex("""(/\*[\s\S]*?\*/)"""),                            C_COMMENT),
             Rule(Regex("""//[^\n]*"""),                                    C_COMMENT),
@@ -274,7 +279,7 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
             Rule(Regex("""\b([a-zA-Z][\w-]*)(?=\()"""),                   C_FUNCTION),
         )
 
-        // â”€â”€ XML / HTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- XML / HTML -------------------------------------------------------
         lang in setOf("xml", "html", "svg") -> listOf(
             Rule(Regex("""<!--[\s\S]*?-->"""),                             C_COMMENT),
             Rule(Regex(""""[^"]*"|'[^']*'"""),                            C_STRING),
@@ -282,7 +287,7 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
             Rule(Regex("""\b[A-Za-z][A-Za-z0-9_.-]*(?=\s*=)"""),         C_TYPE),
         )
 
-        // â”€â”€ SQL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- SQL --------------------------------------------------------------
         lang == "sql" -> listOf(
             Rule(Regex("""--[^\n]*"""),                                    C_COMMENT),
             Rule(Regex("""'[^'\\]*(?:\\.[^'\\]*)*'"""),                   C_STRING),
@@ -290,7 +295,7 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
             Rule(Regex("""\b\d+\.?\d*\b"""),                              C_NUMBER),
         )
 
-        // â”€â”€ Fallback: generic highlight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // -- Fallback: generic highlight --------------------------------------
         else -> listOf(
             Rule(Regex("""//[^\n]*|#[^\n]*"""),                           C_COMMENT),
             Rule(Regex("""/\*[\s\S]*?\*/"""),                             C_COMMENT),
@@ -300,7 +305,7 @@ private fun highlight(code: String, language: String): androidx.compose.ui.text.
         )
     }
 
-    // â”€â”€ Apply rules to produce coloured spans â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // -- Apply rules to produce coloured spans ------------------------------
     // Build a flat list of (start, end, color) spans, then render
     data class Span(val start: Int, val end: Int, val color: Color)
 

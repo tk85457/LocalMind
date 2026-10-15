@@ -19,18 +19,18 @@ class SettingsRepository @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) {
     companion object {
-        // â”€â”€ Context Init Params (PocketPal contextInitParamsVersions.ts v2.1) â”€â”€
+        // -- Context Init Params (PocketPal contextInitParamsVersions.ts v2.1) --
         // LOW-RAM FIX: Default context 1024 for 4GB devices. DeviceProfileManager
-        // recommendedContextSize ab RAM ke hisaab se set hota hai â€” but DataStore
+        // recommendedContextSize ab RAM ke hisaab se set hota hai  —  but DataStore
         // first-time default ye value use karta hai.
         // User settings screen pe badha sakte hain.
         // POCKETPAL EXACT: n_ctx = 2048 (createDefaultContextInitParams)
         // Low-RAM devices pe DeviceProfileManager runtime mein context reduce karta hai
         // (checkModelLoad mein tunedContextSize = max safe based on available RAM).
-        // Default 1024 rakha tha LOW-RAM ke liye â€” lekin PocketPal bhi 2048 default hai
+        // Default 1024 rakha tha LOW-RAM ke liye  —  lekin PocketPal bhi 2048 default hai
         // aur runtime tuning karta hai, toh hum bhi same approach follow karte hain.
         const val DEFAULT_CONTEXT_SIZE = 2048           // POCKETPAL EXACT: n_ctx = 2048 (was 1024)
-        // POCKETPAL FIX: Batch size defaults â€” PocketPal exact values use karo.
+        // POCKETPAL FIX: Batch size defaults  —  PocketPal exact values use karo.
         // PocketPal contextInitParamsVersions.ts: n_batch = 512, n_ubatch = 512.
         // LOW-RAM devices (<=4GB) mein DeviceProfileManager runtime override karta hai.
         // 512 batch_size on 6GB+ devices = faster prompt prefill (batched token processing).
@@ -46,7 +46,7 @@ class SettingsRepository @Inject constructor(
         // PocketPal: flash_attn_type = 'off' on Android (only 'auto' on iOS)
         const val DEFAULT_FLASH_ATTENTION = false
         // LOW-RAM FIX: Q8_0 KV cache = F16 se 50% less RAM, minimal quality loss.
-        // POCKETPAL EXACT: F16 KV cache â€” PocketPal ka default (createDefaultContextInitParams).
+        // POCKETPAL EXACT: F16 KV cache  —  PocketPal ka default (createDefaultContextInitParams).
         // Q8_0 se SmolVLM2/LLaVA jaise vision models ka llama_init_from_model FAIL hota hai
         // (logcat mein dikh raha tha: type_k=8,type_v=8 pe ctx init fail at all sizes).
         // F16 = safe for ALL models. LLMEngine mein migration bhi hai jo DataStore ka
@@ -57,7 +57,7 @@ class SettingsRepository @Inject constructor(
         const val DEFAULT_N_PARALLEL = 1                // PocketPal: n_parallel = 1 (blocking completion only, no parallel slots needed)
         const val DEFAULT_IMAGE_MAX_TOKENS = 512        // PocketPal: image_max_tokens = 512
 
-        // â”€â”€ Completion Params (PocketPal completionSettingsVersions.ts v3) â”€â”€
+        // -- Completion Params (PocketPal completionSettingsVersions.ts v3) --
         // LOW-RAM FIX: 4GB phones pe 1024 tokens = ~40-60s on CPU-only.
         // 512 = sweet spot: complete answers + 2-3x faster on low-RAM devices.
         // User settings screen pe badha sakte hain agar zaroorat ho.
@@ -79,22 +79,22 @@ class SettingsRepository @Inject constructor(
         const val DEFAULT_MIROSTAT_ETA = 0.1f           // PocketPal: mirostat_eta = 0.1
         const val DEFAULT_SEED = -1                     // PocketPal: seed = -1 (random)
         const val DEFAULT_N_PROBS = 0                   // PocketPal: n_probs = 0
-        // TTFT FIX: jinja=false by default â€” native template path mein engineMutex
+        // TTFT FIX: jinja=false by default  —  native template path mein engineMutex
         // contention + extra JNI overhead hai. PromptBuilderService path faster hai for now.
         // Jab generateWithMessages flow optimize ho tab true karna.
         const val DEFAULT_JINJA = true                  // PocketPal: jinja = true
-        // FIX: enable_thinking = true (PocketPal exact). Auto-detection at runtime mein handle hoga â€”
+        // FIX: enable_thinking = true (PocketPal exact). Auto-detection at runtime mein handle hoga  — 
         // reasoning models pe true, non-reasoning pe false. Static false = reasoning models broken.
         const val DEFAULT_ENABLE_THINKING = true        // POCKETPAL EXACT: enable_thinking = true
         // FIX: Reasoning/thinking text ko KABHI BHI context history mein include mat karo.
         // Sirf UI (ThinkingBubble) pe dikhni chahiye. Token budget waste nahi hoga.
         const val DEFAULT_INCLUDE_THINKING_IN_CONTEXT = false
 
-        // â”€â”€ Other Settings â”€â”€
+        // -- Other Settings --
         const val DEFAULT_CACHE_PROMPT = true
         const val DEFAULT_DEFRAG_THRESHOLD = 0.1f
         const val DEFAULT_SPECULATIVE_DECODING = true
-        const val DEFAULT_MIN_N_CTX = 256  // CRASH FIX: was 1024 â€” minimum fallback context
+        const val DEFAULT_MIN_N_CTX = 256  // CRASH FIX: was 1024  —  minimum fallback context
     }
 
     private object PreferencesKeys {
@@ -178,7 +178,7 @@ class SettingsRepository @Inject constructor(
     val memoryMapping: Flow<String> = dataStore.data.map { it[PreferencesKeys.MEMORY_MAPPING] ?: "Smart" }
     val autoOffload: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.AUTO_OFFLOAD] ?: false }
     val language: Flow<String> = dataStore.data.map { it[PreferencesKeys.LANGUAGE] ?: "English (EN)" }
-    val darkMode: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.DARK_MODE] ?: true }
+    val darkMode: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.DARK_MODE] ?: false }
     val autoNavigateChat: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.AUTO_NAVIGATE_CHAT] ?: true }
 
     val temperature: Flow<Float> = dataStore.data.map { it[PreferencesKeys.TEMPERATURE] ?: 0.7f }
@@ -187,7 +187,7 @@ class SettingsRepository @Inject constructor(
     // WIRING FIX: Old REPEAT_PENALTY key (legacy, 1.1f default) aur new PENALTY_REPEAT key dono exist karte the.
     // Settings screen REPEAT_PENALTY update karta tha, lekin allSettingsFlow() PENALTY_REPEAT padhta tha.
     // Fix: repeatPenalty flow ab PENALTY_REPEAT key padhega (PocketPal parity, 1.0f default).
-    // updateRepeatPenalty() bhi PENALTY_REPEAT update karega â€” sirf ek source of truth.
+    // updateRepeatPenalty() bhi PENALTY_REPEAT update karega  —  sirf ek source of truth.
     val repeatPenalty: Flow<Float> = dataStore.data.map { it[PreferencesKeys.PENALTY_REPEAT] ?: DEFAULT_PENALTY_REPEAT }
     val threadCount: Flow<Int> = dataStore.data.map {
         it[PreferencesKeys.THREAD_COUNT] ?: defaultThreadCount()
@@ -214,7 +214,7 @@ class SettingsRepository @Inject constructor(
     val defragThreshold: Flow<Float> = dataStore.data.map { it[PreferencesKeys.DEFRAG_THRESHOLD] ?: DEFAULT_DEFRAG_THRESHOLD }
     val speculativeDecoding: Flow<Boolean> = dataStore.data.map { it[PreferencesKeys.SPECULATIVE_DECODING] ?: DEFAULT_SPECULATIVE_DECODING }
     val minNCtx: Flow<Int> = dataStore.data.map { it[PreferencesKeys.MIN_N_CTX] ?: DEFAULT_MIN_N_CTX }
-    // PocketPal Completion Params â€” all flows
+    // PocketPal Completion Params  —  all flows
     val minP: Flow<Float> = dataStore.data.map { it[PreferencesKeys.MIN_P] ?: DEFAULT_MIN_P }
     val seed: Flow<Int> = dataStore.data.map { it[PreferencesKeys.SEED] ?: DEFAULT_SEED }
     val xtcThreshold: Flow<Float> = dataStore.data.map { it[PreferencesKeys.XTC_THRESHOLD] ?: DEFAULT_XTC_THRESHOLD }
@@ -492,7 +492,7 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[PreferencesKeys.SEED] = value }
     }
 
-    // â”€â”€ New PocketPal Parity update functions â”€â”€
+    // -- New PocketPal Parity update functions --
     suspend fun updateXtcThreshold(value: Float) { dataStore.edit { it[PreferencesKeys.XTC_THRESHOLD] = value } }
     suspend fun updateXtcProbability(value: Float) { dataStore.edit { it[PreferencesKeys.XTC_PROBABILITY] = value } }
     suspend fun updateTypicalP(value: Float) { dataStore.edit { it[PreferencesKeys.TYPICAL_P] = value } }
@@ -534,19 +534,19 @@ class SettingsRepository @Inject constructor(
 
         dataStore.edit { prefs ->
             // Max tokens: agar user ne 512 ya kam set kiya hai (purani galat default se)
-            // toh 1024 pe restore karo â€” PocketPal exact default.
+            // toh 1024 pe restore karo  —  PocketPal exact default.
             val currentMaxTokens = prefs[PreferencesKeys.MAX_TOKENS] ?: DEFAULT_MAX_TOKENS
             if (currentMaxTokens < 1024) prefs[PreferencesKeys.MAX_TOKENS] = 1024
 
             // POCKETPAL MIGRATION: Context size 2048 karo (PocketPal exact default).
-            // Purana LOW-RAM FIX 1024 tha â€” lekin DeviceProfileManager runtime tuning karta hai
+            // Purana LOW-RAM FIX 1024 tha  —  lekin DeviceProfileManager runtime tuning karta hai
             // toh DataStore default 2048 safe hai. Existing 1024 users ko 2048 milega.
             // NOTE: Agar context 2048 se kam hai toh badha do (PocketPal default match).
             // Agar user ne manually kuch set kiya hai (>2048) toh touch mat karo.
             val currentContext = prefs[PreferencesKeys.CONTEXT_SIZE] ?: DEFAULT_CONTEXT_SIZE
             if (currentContext < 2048) prefs[PreferencesKeys.CONTEXT_SIZE] = 2048
 
-            // Batch size: PocketPal default 512/512 â€” kisi ne manually 128/64 set kiya ho toh
+            // Batch size: PocketPal default 512/512  —  kisi ne manually 128/64 set kiya ho toh
             // usse restore karo PocketPal default pe (runtime tuning handle kar legi).
             val currentBatch = prefs[PreferencesKeys.BATCH_SIZE] ?: DEFAULT_BATCH_SIZE
             if (currentBatch < 512) prefs[PreferencesKeys.BATCH_SIZE] = 512
@@ -566,7 +566,7 @@ class SettingsRepository @Inject constructor(
 
     // FIX #1: Single flow that emits a fully-populated CachedSettings snapshot whenever
     // ANY pref changes. Since DataStore writes all prefs to a single file, every pref
-    // change triggers one emission here â€” we then read every value from the same snapshot.
+    // change triggers one emission here  —  we then read every value from the same snapshot.
     // This replaces 23 parallel .first() calls per message with zero disk reads at inference time.
     fun allSettingsFlow(): kotlinx.coroutines.flow.Flow<ChatViewModelSettings> {
         return dataStore.data.map { prefs ->

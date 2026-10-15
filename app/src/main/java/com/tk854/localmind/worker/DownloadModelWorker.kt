@@ -166,7 +166,7 @@ class DownloadModelWorker @AssistedInject constructor(
             )
             val elapsedMs = downloadOutcome.elapsedMs.coerceAtLeast(1L)
             val averageBps = (downloadOutcome.totalSizeBytes * 1000L) / elapsedMs
-            // SECURITY FIX: model name not logged in release â€” use SecureLogger
+            // SECURITY FIX: model name not logged in release  —  use SecureLogger
             SecureLogger.i(
                 "LocalMind-Download",
                 "Download completed size=${downloadOutcome.totalSizeBytes}B elapsedMs=$elapsedMs avgSpeed=${formatSpeed(averageBps)}"

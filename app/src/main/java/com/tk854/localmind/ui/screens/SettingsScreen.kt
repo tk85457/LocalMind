@@ -29,7 +29,6 @@ import com.tk854.localmind.ui.viewmodel.SettingsViewModel
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToPersonas: () -> Unit = {},
     onNavigateToPromptTemplates: () -> Unit = {},
     onNavigateToOnboarding: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
@@ -151,7 +150,7 @@ fun SettingsScreen(
             )
 
 
-            // Advanced Inference (Modularized) â€” Full PocketPal parity
+            // Advanced Inference (Modularized)  —  Full PocketPal parity
             AdvancedInferenceSection(
                 settings = settings,
                 maxThreads = maxThreads,
@@ -171,7 +170,7 @@ fun SettingsScreen(
                 onShowRamWarning = { showRamWarning = it },
                 onMinPChange = { viewModel.updateMinP(it) },
                 onSeedChange = { viewModel.updateSeed(it) },
-                // PocketPal full parity â€” new params
+                // PocketPal full parity  —  new params
                 onXtcThresholdChange = { viewModel.updateXtcThreshold(it) },
                 onXtcProbabilityChange = { viewModel.updateXtcProbability(it) },
                 onTypicalPChange = { viewModel.updateTypicalP(it) },
@@ -188,12 +187,6 @@ fun SettingsScreen(
 
             // Customization Section
             SettingsSection(title = "Customization") {
-                SettingsItem(
-                    icon = Icons.Default.SmartToy,
-                    title = "Manage Pals (Personas)",
-                    subtitle = "Create and edit AI personas",
-                    onClick = onNavigateToPersonas
-                )
                 SettingsItem(
                     icon = Icons.Default.AutoAwesome,
                     title = "Prompt Library",

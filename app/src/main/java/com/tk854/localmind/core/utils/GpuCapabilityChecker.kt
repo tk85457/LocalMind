@@ -20,7 +20,7 @@ import javax.inject.Singleton
  *
  * Teeno TRUE ho tabhi GPU enable hoti hai. Ek bhi false = CPU-only mode.
  * Ye ensure karta hai ki non-Qualcomm devices (jaise V2135 phones) pe
- * GPU blindly enable na ho â€” jo crash aur incorrect results deta tha.
+ * GPU blindly enable na ho  —  jo crash aur incorrect results deta tha.
  */
 data class GpuCapability(
     val isAdrenoGpu: Boolean,

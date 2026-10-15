@@ -4,15 +4,10 @@
 # SECURITY: ProGuard hardening rules (OWASP MASVS MSTG-RESILIENCE-9)
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-# Remove all debug log calls in release (MSTG-RESILIENCE-2)
+# Remove verbose and debug log calls in release (keep warning and error for diagnostics)
 -assumenosideeffects class android.util.Log {
     public static int v(...);
     public static int d(...);
-    public static int i(...);
-    public static int w(...);
-    public static int e(...);
-    public static int wtf(...);
-    public static java.lang.String getStackTraceString(java.lang.Throwable);
 }
 
 # Keep Android Keystore and Crypto classes
@@ -88,15 +83,22 @@
 
 # PDFBox optional JPX decoder dependency is not bundled
 -dontwarn com.gemalto.jp2.JP2Decoder
+-keep class com.tom_roush.pdfbox.** { *; }
+-dontwarn com.tom_roush.pdfbox.**
 
 # Keep Parcelables
 -keep class * implements android.os.Parcelable {
   public static final android.os.Parcelable$Creator *;
 }
 
-# Remove logging in release
--assumenosideeffects class android.util.Log {
-    public static *** d(...);
-    public static *** v(...);
-    public static *** i(...);
-}
+# Markwon & Prism4j
+-keep class io.noties.markwon.** { *; }
+-dontwarn io.noties.markwon.**
+-keep class io.noties.prism4j.** { *; }
+-dontwarn io.noties.prism4j.**
+
+# Lottie
+-keep class com.airbnb.lottie.** { *; }
+
+# Jsoup
+-keep class org.jsoup.** { *; }

@@ -33,14 +33,14 @@ class HardwareMonitor @Inject constructor(
         while (true) {
             emit(generateStats())
             // BUGFIX: Replaced fragile java.util.concurrent.CancellationException hack.
-            // Old code threw JUC CancellationException inside a coroutine collector â€” wrong type,
+            // Old code threw JUC CancellationException inside a coroutine collector  —  wrong type,
             // could silently swallow real coroutine cancellation in some Kotlin versions.
             // New approach: just delay 1 second. The refresh trigger is a nice-to-have
             // but hardware stats don\'t need sub-second freshness; 1s polling is fine.
             try {
                 kotlinx.coroutines.delay(1_000L)
             } catch (e: kotlinx.coroutines.CancellationException) {
-                // Coroutine cancelled â€” exit cleanly
+                // Coroutine cancelled  —  exit cleanly
                 throw e
             }
         }
@@ -63,7 +63,7 @@ class HardwareMonitor @Inject constructor(
     private fun getCpuUsage(): Float {
         // Read /proc/stat twice with a short sleep to calculate real CPU usage.
         // Thread.sleep is acceptable here because getCpuUsage() is always called
-        // from getStatsFlow() which runs on Dispatchers.IO â€” blocking is safe.
+        // from getStatsFlow() which runs on Dispatchers.IO  —  blocking is safe.
         // Fallback to 0f if file unreadable (strict SELinux on some ROMs).
         return try {
             val line1 = java.io.BufferedReader(java.io.FileReader("/proc/stat")).use { it.readLine() }

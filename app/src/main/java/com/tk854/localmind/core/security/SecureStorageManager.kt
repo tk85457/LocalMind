@@ -19,7 +19,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * OWASP MASVS L2 â€” Secure Storage & Cryptography
+ * OWASP MASVS L2  —  Secure Storage & Cryptography
  *
  * Fixes:
  * - MSTG-CRYPTO-1: AES/GCM/NoPadding (replaces ECB/CBC)
@@ -43,10 +43,10 @@ class SecureStorageManager @Inject constructor(
         private const val ENCRYPTED_PREFS_FILE = "localmind_secure_prefs"
     }
 
-    // SecureRandom â€” cryptographically secure (MSTG-CRYPTO-6)
+    // SecureRandom  —  cryptographically secure (MSTG-CRYPTO-6)
     private val secureRandom = SecureRandom()
 
-    // Android Keystore â€” AES/GCM key generation (MSTG-STORAGE-2, MSTG-CRYPTO-1)
+    // Android Keystore  —  AES/GCM key generation (MSTG-STORAGE-2, MSTG-CRYPTO-1)
     private fun getOrCreateKey(): SecretKey {
         val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER).apply { load(null) }
         if (keyStore.containsAlias(KEY_ALIAS)) {
@@ -67,7 +67,7 @@ class SecureStorageManager @Inject constructor(
             .generateKey()
     }
 
-    // Encrypt with AES/GCM/NoPadding â€” returns iv + ciphertext
+    // Encrypt with AES/GCM/NoPadding  —  returns iv + ciphertext
     fun encrypt(plaintext: ByteArray): ByteArray {
         val cipher = Cipher.getInstance(AES_MODE)
         val key = getOrCreateKey()
@@ -137,7 +137,7 @@ class SecureStorageManager @Inject constructor(
         encryptedPrefs.edit().remove(key).apply()
     }
 
-    // Input validation (OWASP â€” input sanitization)
+    // Input validation (OWASP  —  input sanitization)
     fun sanitizeInput(input: String, maxLength: Int = 1024): String {
         return input
             .take(maxLength)

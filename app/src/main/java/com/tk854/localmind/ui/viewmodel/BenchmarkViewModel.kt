@@ -35,7 +35,7 @@ data class BenchmarkResult(
     val modelLoadTimeMs: Double = 0.0,
     val contextSize: Int = 0,
     val threadCount: Int = 0,
-    // NEW: Time to First Token (TTFT) â€” how fast model responds
+    // NEW: Time to First Token (TTFT)  —  how fast model responds
     val timeToFirstTokenMs: Long = 0,
     // NEW: Peak RAM used during benchmark
     val peakMemoryMB: Long = 0,
@@ -50,11 +50,11 @@ data class BenchmarkResult(
 ) {
     /** Performance rating based on TPS for mobile LLM inference */
     val performanceRating: String get() = when {
-        tokensPerSecond >= 25f -> "ðŸš€ Excellent"
-        tokensPerSecond >= 15f -> "âš¡ Good"
-        tokensPerSecond >= 8f  -> "âœ… Acceptable"
-        tokensPerSecond >= 3f  -> "âš ï¸ Slow"
-        else                   -> "ðŸ¢ Very Slow"
+        tokensPerSecond >= 25f -> "🚀 Excellent"
+        tokensPerSecond >= 15f -> "⚡ Good"
+        tokensPerSecond >= 8f  -> "✅ Acceptable"
+        tokensPerSecond >= 3f  -> "⚠️ Slow"
+        else                   -> "🐢 Very Slow"
     }
 
     val performanceColor: String get() = when {
@@ -171,9 +171,9 @@ class BenchmarkViewModel @Inject constructor(
                 val profile = deviceProfileManager.currentProfile()
 
                 // FIX: Use generateWithMessages (chat template API) instead of raw generate().
-                // Raw generate() skips the model's chat template â†’ many models produce 0 tokens.
+                // Raw generate() skips the model's chat template → many models produce 0 tokens.
                 // generateWithMessages applies the model's actual GGUF jinja template,
-                // which is what the chat screen uses â€” guaranteed to produce output.
+                // which is what the chat screen uses  —  guaranteed to produce output.
                 val benchmarkSystemPrompt = "You are a helpful AI assistant. Answer concisely."
                 val benchmarkUserPrompt = if (profile.totalRamGb <= 4) {
                     "What is 2+2? Answer in one sentence."
@@ -242,7 +242,7 @@ class BenchmarkViewModel @Inject constructor(
 
                 if (tokenCount <= 0) {
                     _benchmarkState.value = BenchmarkState.Error(
-                        "Model generated 0 tokens.\n\nPossible causes:\nâ€¢ Model not fully loaded\nâ€¢ Context size too small\nâ€¢ Try reloading the model from Settings"
+                        "Model generated 0 tokens.\n\nPossible causes:\n• Model not fully loaded\n• Context size too small\n• Try reloading the model from Settings"
                     )
                     return@launch
                 }
@@ -278,7 +278,7 @@ class BenchmarkViewModel @Inject constructor(
                     peakMemoryMB = memAfter.coerceAtLeast(0),
                     cpuCores = Runtime.getRuntime().availableProcessors(),
                     totalRamGb = profile.totalRamGb.toDouble(),
-                    gpuLayers = 0, // ModelLifecyclePlan mein gpuLayers nahi â€” LLMEngine se actual value milegi
+                    gpuLayers = 0, // ModelLifecyclePlan mein gpuLayers nahi  —  LLMEngine se actual value milegi
                     promptTokens = 0 // native layer se nahi milta via current API
                 )
 
@@ -327,7 +327,7 @@ class BenchmarkViewModel @Inject constructor(
             message.contains("memory pressure", ignoreCase = true) ->
                 "Low memory. Close other apps and retry."
             message.contains("No model loaded", ignoreCase = true) ->
-                "No model is loaded.\nGo to Settings â†’ select a model first."
+                "No model is loaded.\nGo to Settings → select a model first."
             message.isNotBlank() -> message
             else -> "Benchmark failed. Please try again."
         }

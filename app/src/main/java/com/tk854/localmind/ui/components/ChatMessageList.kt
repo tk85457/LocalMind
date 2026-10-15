@@ -10,8 +10,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -52,7 +55,7 @@ fun ChatMessageList(
     streamingResponse: String?,
     streamingReasoning: String? = null,
     isThinking: Boolean = false,
-    // PART 13: Settings toggle â€” "Show reasoning" option
+    // PART 13: Settings toggle  —  "Show reasoning" option
     showReasoning: Boolean = true,
     isAnalyzingDocument: Boolean,
     isAnalyzingMedia: Boolean,
@@ -90,15 +93,15 @@ fun ChatMessageList(
     }
 
     // SCROLL FIX: Generation start pe latest pe scroll karo.
-    // STOP FIX: Stop hone pe current scroll position freeze karo â€” scroll UP nahi hona chahiye.
+    // STOP FIX: Stop hone pe current scroll position freeze karo  —  scroll UP nahi hona chahiye.
     // Streaming bubble hatne se layout reflow hoti hai jo scroll ko shift karti thi.
     // Fix: stop hone pe scrollToItem(0) call karo taaki bottom pe fixed rahe.
     androidx.compose.runtime.LaunchedEffect(isGenerating) {
         if (isGenerating) {
-            // Generation shuru hui â€” latest (bottom) pe jaao
+            // Generation shuru hui  —  latest (bottom) pe jaao
             if (totalItems > 0) listState.scrollToItem(0)
         } else {
-            // Stop hua â€” bottom pe freeze karo, scroll UP nahi hoga
+            // Stop hua  —  bottom pe freeze karo, scroll UP nahi hoga
             // Small delay: layout reflow complete hone do pehle
             kotlinx.coroutines.delay(80)
             if (totalItems > 0) listState.scrollToItem(0)
@@ -139,7 +142,7 @@ fun ChatMessageList(
                     .atZone(ZoneId.systemDefault()).toLocalDate()
             }
 
-            // At date boundary or end of list â€” insert a date header
+            // At date boundary or end of list  —  insert a date header
             if (nextDate == null || nextDate != msgDate) {
                 val label = when {
                     msgDate.isEqual(today) -> "Today"
@@ -188,8 +191,8 @@ fun ChatMessageList(
                 }
             }
 
-            // â”€â”€ STREAMING REASONING (ThinkingBubble) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            // reverseLayout=true â†’ index 0 = bottom = right after user's question
+            // -- STREAMING REASONING (ThinkingBubble) ---------------------
+            // reverseLayout=true → index 0 = bottom = right after user's question
             // This positions ThinkingBubble exactly where it should be
             if (isGenerating && !streamingResponse.isNullOrBlank()) {
                 item(key = "streaming_response") {
@@ -220,8 +223,8 @@ fun ChatMessageList(
                             modifier = Modifier.padding(bottom = 3.dp, start = 6.dp)
                         )
                         val safeResponse = cleanStreamingText(streamingResponse)
-                        val cursor = if (cursorAlpha > 0.5f) "â–Œ" else ""
-                        // FONT FIX: MarkdownText use karo har case mein â€” streaming aur final
+                        val cursor = if (cursorAlpha > 0.5f) "\u258C" else ""
+                        // FONT FIX: MarkdownText use karo har case mein  —  streaming aur final
                         // dono exactly same font/lineHeight/style dikhayenge.
                         // Plain Text() alag lineHeight deta tha jisse streaming-to-final jump visible tha.
                         MarkdownText(
@@ -249,7 +252,7 @@ fun ChatMessageList(
                 }
             }
 
-            // â”€â”€ STREAMING ANSWER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // -- STREAMING ANSWER -------------------------------------
             // Messages + Date headers as a flat list
             items(
                 items = chatListItems,
@@ -297,7 +300,7 @@ fun ChatMessageList(
                         MessageBubble(
                             message = item.message,
                             modifier = Modifier
-                                .animateItemPlacement()
+                                .animateItem()
                                 .fillMaxWidth()
                                 .padding(horizontal = dimens.paddingScreenHorizontal),
                             showReasoning = showReasoning,
@@ -326,34 +329,39 @@ fun ChatMessageList(
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
-            FloatingActionButton(
+            Surface(
                 onClick = {
                     coroutineScope.launch {
                         listState.animateScrollToItem(0)
                     }
                 },
-                containerColor = NeonPrimary,
-                contentColor = NeonSurface,
-                modifier = Modifier.size(40.dp)
+                shape = CircleShape,
+                color = NeonElevated,
+                border = BorderStroke(1.dp, NeonBorder),
+                shadowElevation = 3.dp,
+                modifier = Modifier.size(38.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowUpward,
-                    contentDescription = "Jump to latest",
-                    modifier = Modifier.size(20.dp)
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDownward,
+                        contentDescription = "Jump to latest",
+                        tint = NeonText,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }
 }
 
 /**
- * Streaming text cleaner â€” removes all template/stop token artifacts:
+ * Streaming text cleaner  —  removes all template/stop token artifacts:
  * - <think>, </think>, <thinking>, </thinking> etc.
  * - < | token | > style: <|im_end|>, < | end_of_sentence | >, <|eot_id|> etc.
  * - Standalone dangling < at word boundaries (not valid HTML/markdown)
  * - Pipe-only artifacts: | end_of_sentence |
  */
-// Pre-compiled regexes â€” compiled ONCE, reused on every token/recompose
+// Pre-compiled regexes  —  compiled ONCE, reused on every token/recompose
 private val REGEX_THINK_BLOCK = Regex("(?is)<think>[\\s\\S]*?</think>")
 private val REGEX_THINKING_BLOCK = Regex("(?is)<thinking>[\\s\\S]*?</thinking>")
 private val REGEX_THOUGHT_BLOCK = Regex("(?is)<thought>[\\s\\S]*?</thought>")
@@ -361,14 +369,14 @@ private val REGEX_THINK_TAGS = Regex("</?(think|thinking|thought|reasoning)>", R
 private val REGEX_PIPE_SPACED = Regex("<\\s*\\|[^>]{0,80}\\|\\s*>")
 private val REGEX_PIPE_COMPACT = Regex("<\\|[^|>]{0,60}\\|>")
 private val REGEX_PIPE_STANDALONE = Regex("\\|\\s*[a-zA-Z0-9_ ]{1,40}\\s*\\|")
-private val REGEX_TEMPLATE_TAGS = Regex("</?[a-z_][a-z0-9_\\s|]{0,40}>")
+private val REGEX_TEMPLATE_TAGS = Regex("</?[a-z0-9]+_[a-z0-9_\\s|]{0,40}>", RegexOption.IGNORE_CASE)
 private val REGEX_DANGLING_LT = Regex("<[^>\\n]{0,10}$")
 private val REGEX_LONE_LT = Regex("(?<![\\w\\s])<(?![\\w/])")
 private val REGEX_TRAILING_GT = Regex("(?<![\\w])\\s*>\\s*$")
 
 /**
  * Strips ALL model template/stop-token artifacts from text.
- * Uses pre-compiled regexes for performance â€” safe to call on every token.
+ * Uses pre-compiled regexes for performance  —  safe to call on every token.
  */
 fun cleanModelText(text: String): String {
     if (text.isBlank()) return text
@@ -387,5 +395,5 @@ fun cleanModelText(text: String): String {
         .trim()
 }
 
-// Alias for streaming â€” same function
+// Alias for streaming  —  same function
 fun cleanStreamingText(text: String): String = cleanModelText(text)

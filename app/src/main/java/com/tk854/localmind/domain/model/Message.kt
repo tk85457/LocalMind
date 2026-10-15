@@ -13,7 +13,7 @@ data class Message(
     val ttftMs: Long? = null,
     val generationMs: Long? = null,
     val tokensPerSecond: Float? = null,
-    // Kitne seconds model ne socha â€” ThinkingBubble mein "Thought for Xs" label ke liye
+    // Kitne seconds model ne socha  —  ThinkingBubble mein "Thought for Xs" label ke liye
     val thinkingDurationSec: Int? = null
 )
 
@@ -28,7 +28,7 @@ enum class MessageRole {
             return when (value.lowercase().trim()) {
                 "user" -> USER
                 "assistant", "model", "ai", "bot", "system" -> ASSISTANT
-                else -> ASSISTANT // Safe fallback â€” never crash on unknown role
+                else -> ASSISTANT // Safe fallback  —  never crash on unknown role
             }
         }
     }

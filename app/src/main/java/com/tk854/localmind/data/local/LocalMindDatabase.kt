@@ -127,12 +127,12 @@ abstract class LocalMindDatabase : RoomDatabase() {
         /**
          * v14: PocketPal WatermelonDB parity migration.
          * Adds:
-         *  1. conversations.isPinned       â€” pin to top
-         *  2. conversations.personaId      â€” link to persona
-         *  3. conversations.totalTokens    â€” running token sum
-         *  4. conversations.lastMessagePreview â€” cached preview
-         *  5. conversations.lastMessageRole    â€” "user"/"assistant"
-         *  6. message_fts FTS4 virtual table   â€” full-text search
+         *  1. conversations.isPinned        —  pin to top
+         *  2. conversations.personaId       —  link to persona
+         *  3. conversations.totalTokens     —  running token sum
+         *  4. conversations.lastMessagePreview  —  cached preview
+         *  5. conversations.lastMessageRole     —  "user"/"assistant"
+         *  6. message_fts FTS4 virtual table    —  full-text search
          */
         val MIGRATION_13_14 = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -193,7 +193,7 @@ abstract class LocalMindDatabase : RoomDatabase() {
                 """.trimIndent())
 
                 // 5. Create FTS4 virtual table for full-text search on messages
-                // content="" means external content table â€” keeps DB size small
+                // content="" means external content table  —  keeps DB size small
                 db.execSQL("""
                     CREATE VIRTUAL TABLE IF NOT EXISTS message_fts
                     USING fts4(content="messages", content)
@@ -307,7 +307,7 @@ abstract class LocalMindDatabase : RoomDatabase() {
                 // MIGRATION_13_14 created idx_conversations_isPinned as:
                 //   CREATE INDEX ... ON conversations(isPinned, updatedAt DESC)
                 // But ConversationEntity declares it as Index.Order.ASC for isPinned + DESC for updatedAt.
-                // Room generates a different CREATE INDEX statement, causing schema mismatch â†’ crash.
+                // Room generates a different CREATE INDEX statement, causing schema mismatch → crash.
                 // Fix: Drop the old index and recreate it exactly as Room expects.
                 db.execSQL("DROP INDEX IF EXISTS idx_conversations_isPinned")
                 db.execSQL(

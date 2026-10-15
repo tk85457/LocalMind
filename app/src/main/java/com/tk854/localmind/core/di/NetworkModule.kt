@@ -29,7 +29,7 @@ object NetworkModule {
         hfAuthHeaderInterceptor: HfAuthHeaderInterceptor
     ): OkHttpClient {
         // SECURITY FIX: HTTP logging ONLY in debug builds
-        // In release builds, network requests are never logged â€” prevents token/URL leaks
+        // In release builds, network requests are never logged  —  prevents token/URL leaks
         // OWASP MSTG-NETWORK-1, MSTG-RESILIENCE-2
         return OkHttpClient.Builder()
             .addInterceptor(hfAuthHeaderInterceptor)

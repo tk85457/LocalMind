@@ -1,6 +1,6 @@
 package com.tk854.localmind.llm
 
-// PART 1 â€” Model Capability Detection
+// PART 1  —  Model Capability Detection
 enum class ModelCapability { CHAT, CODE, REASONING }
 
 fun detectModelCapability(modelName: String): ModelCapability {
@@ -16,10 +16,10 @@ fun detectModelCapability(modelName: String): ModelCapability {
     }
 }
 
-// PART 3 â€” Token Type
+// PART 3  —  Token Type
 enum class TokenType { THINK_START, THINK_END, REASONING, ANSWER }
 
-// PART 4 â€” Stream Chunk
+// PART 4  —  Stream Chunk
 data class StreamChunk(
     val reasoning: String? = null,
     val answer: String? = null,
@@ -28,9 +28,9 @@ data class StreamChunk(
 )
 
 /**
- * ReasoningParser â€” Multi-model thinking tag separator.
+ * ReasoningParser  —  Multi-model thinking tag separator.
  *
- * Supported tag pairs (Issue #5 fix â€” model detection incomplete):
+ * Supported tag pairs (Issue #5 fix  —  model detection incomplete):
  *   DeepSeek R1  : <think>    ... </think>
  *   Qwen3        : <thinking> ... </thinking>
  *   Generic      : <thought>  ... </thought>
@@ -38,20 +38,20 @@ data class StreamChunk(
  *   Phi-4        : <analysis> ... </analysis>
  *
  * Architecture: Simple state machine with indexOf.
- * - inThinking=false â†’ find start tag â†’ switch to reasoning mode
- * - inThinking=true  â†’ find end tag   â†’ switch to answer mode
+ * - inThinking=false → find start tag → switch to reasoning mode
+ * - inThinking=true  → find end tag   → switch to answer mode
  *
  * Partial tag buffering: hold only if text ends with an incomplete
  * tag prefix (<, </, <th, etc.) and no ">" seen yet.
  */
 class ReasoningParser(
-    /** When true, parser STARTS in THINKING state â€” for models that
+    /** When true, parser STARTS in THINKING state  —  for models that
      *  output reasoning without an opening <think> tag.
      *  Everything before </think> (or any known end tag) is reasoning. */
     private val assumeThinkingFromStart: Boolean = false
 ) {
 
-    // Issue #6 fix â€” ThinkingState machine
+    // Issue #6 fix  —  ThinkingState machine
     enum class ThinkingState { IDLE, THINKING, ANSWERING, COMPLETE }
 
     private var state: ThinkingState = if (assumeThinkingFromStart) ThinkingState.THINKING else ThinkingState.IDLE
@@ -64,7 +64,7 @@ class ReasoningParser(
     val reasoningBuffer = StringBuilder()
     val answerBuffer = StringBuilder()
 
-    // Issue #7 fix â€” answer-only token count
+    // Issue #7 fix  —  answer-only token count
     var answerTokenCount = 0
         private set
 
@@ -74,7 +74,7 @@ class ReasoningParser(
     val isCurrentlyThinking: Boolean
         get() = state == ThinkingState.THINKING
 
-    // Issue #7 fix â€” thinking duration in seconds
+    // Issue #7 fix  —  thinking duration in seconds
     val thinkingDurationSec: Int
         get() {
             val endMs = if (thinkingEndMs > 0) thinkingEndMs else System.currentTimeMillis()
@@ -117,7 +117,7 @@ class ReasoningParser(
                     remaining = remaining.substring(idx + startTag.length)
                     lastType = TokenType.THINK_START
                 } else {
-                    // No start tag â€” all answer
+                    // No start tag  —  all answer
                     answerBuffer.append(remaining)
                     answerTokenCount++
                     if (state == ThinkingState.IDLE) state = ThinkingState.ANSWERING
@@ -125,7 +125,7 @@ class ReasoningParser(
                     remaining = ""
                 }
             } else {
-                // THINKING state â€” look for ANY known end tag
+                // THINKING state  —  look for ANY known end tag
                 // When assumeThinkingFromStart=true, activeEndTag may be empty
                 // so we search for all known end tags
                 val endIdx: Int
@@ -152,7 +152,7 @@ class ReasoningParser(
                     remaining = remaining.substring(endIdx + endTagLen)
                     lastType = TokenType.THINK_END
                 } else {
-                    // No end tag yet â€” all reasoning
+                    // No end tag yet  —  all reasoning
                     reasoningBuffer.append(remaining)
                     lastType = TokenType.REASONING
                     remaining = ""
@@ -177,7 +177,7 @@ class ReasoningParser(
         return best
     }
 
-    /** Find the earliest end tag (any known) in the text â€” used when activeEndTag is empty */
+    /** Find the earliest end tag (any known) in the text  —  used when activeEndTag is empty */
     private fun findEarliestEndTag(text: String): Pair<Int, String>? {
         var bestIdx = Int.MAX_VALUE
         var bestTag: String? = null
@@ -212,7 +212,7 @@ class ReasoningParser(
         } else 0L
     )
 
-    // Issue #15 fix â€” force close unclosed tags
+    // Issue #15 fix  —  force close unclosed tags
     fun forceCloseThinking() {
         if (isCurrentlyThinking) {
             state = ThinkingState.ANSWERING
@@ -233,7 +233,7 @@ class ReasoningParser(
     }
 
     companion object {
-        // Issue #5 fix â€” all supported tag pairs
+        // Issue #5 fix  —  all supported tag pairs
         val TAG_PAIRS = listOf(
             "<think>" to "</think>",
             "<thinking>" to "</thinking>",

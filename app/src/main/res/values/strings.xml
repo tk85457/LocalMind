@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Local Mind - Private Offline AI</string>
+    <string name="app_name">Local Mind</string>
 
     <!-- Default fallbacks required for localized resources -->
-    <string name="onboarding_welcome_title">Welcome to Local Mind - Private Offline AI</string>
+    <string name="onboarding_welcome_title">Welcome to Local Mind</string>
     <string name="onboarding_welcome_desc">Run powerful AI models completely offline</string>
     <string name="onboarding_privacy_title">100% Private</string>
     <string name="onboarding_privacy_desc">No cloud, no tracking, no data collection. Everything stays on your device.</string>
@@ -12,7 +12,7 @@
     <string name="onboarding_get_started">Get Started</string>
     <string name="onboarding_skip">Skip</string>
 
-    <string name="chat_input_hint">Message Local Mind - Private Offline AI...</string>
+    <string name="chat_input_hint">Message Local Mind...</string>
     <string name="chat_send">Send</string>
     <string name="chat_stop">Stop</string>
     <string name="chat_regenerate">Regenerate</string>
@@ -136,14 +136,13 @@
     <string name="restore_models_body">Downloaded models were found missing. Link your model folder to restore without re-downloading.</string>
     <string name="restore_models_relink">Relink folder</string>
     <string name="restore_models_later">Later</string>
-    <string name="drawer_title">Local Mind - Private Offline AI</string>
+    <string name="drawer_title">Local Mind</string>
     <string name="drawer_chat">Chat</string>
     <string name="drawer_history">History</string>
     <string name="drawer_model_library">Model Library</string>
     <string name="drawer_hf_hub">Hugging Face Hub</string>
     <string name="drawer_import_model">Import Model</string>
     <string name="drawer_benchmark">Benchmark</string>
-    <string name="drawer_personas">Personas</string>
     <string name="drawer_recent_chats">Recent Chats</string>
     <string name="drawer_untitled_chat">Untitled Chat</string>
     <string name="drawer_settings">Settings</string>

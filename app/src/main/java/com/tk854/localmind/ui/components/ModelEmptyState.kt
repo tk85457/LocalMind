@@ -45,6 +45,7 @@ fun ModelEmptyState(
             Spacer(Modifier.height(24.dp))
             Button(
                 onClick = onNavigateToLibrary,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
                 )

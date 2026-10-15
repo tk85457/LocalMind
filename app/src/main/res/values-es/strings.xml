@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Local Mind - Private Offline AI</string>
-    <string name="onboarding_welcome_title">Bienvenido a Local Mind - Private Offline AI</string>
+    <string name="app_name">Local Mind</string>
+    <string name="onboarding_welcome_title">Bienvenido a Local Mind</string>
     <string name="onboarding_welcome_desc">Ejecuta potentes modelos de IA completamente offline en tu dispositivo</string>
     <string name="onboarding_privacy_title">100% Privado</string>
     <string name="onboarding_privacy_desc">Sin nube, sin rastreo, sin recolección de datos. Todo se queda en tu dispositivo.</string>
@@ -9,7 +9,7 @@
     <string name="onboarding_models_desc">Importa y ejecuta modelos GGUF de 2B a 8B parámetros</string>
     <string name="onboarding_get_started">Comenzar</string>
     <string name="onboarding_skip">Omitir</string>
-    <string name="chat_input_hint">Mensaje a Local Mind…</string>
+    <string name="chat_input_hint">Mensaje a Local Mind...</string>
     <string name="chat_send">Enviar</string>
     <string name="chat_stop">Detener</string>
     <string name="chat_regenerate">Regenerar</string>
@@ -31,7 +31,7 @@
     <string name="model_detail_parameters">Parámetros</string>
     <string name="import_title">Importar Modelo</string>
     <string name="import_select_file">Seleccionar Archivo GGUF</string>
-    <string name="import_importing">Importando modelo…</string>
+    <string name="import_importing">Importando modelo...</string>
     <string name="import_success">Modelo importado exitosamente</string>
     <string name="import_error">Error al importar modelo</string>
     <string name="import_invalid_file">Archivo GGUF inválido</string>
@@ -59,7 +59,7 @@
     <string name="settings_export_chats">Exportar Chats</string>
     <string name="settings_export_desc">Exportar conversaciones a JSON.</string>
     <string name="settings_export">Exportar</string>
-    <string name="settings_exporting">Exportando chats…</string>
+    <string name="settings_exporting">Exportando chats...</string>
     <string name="settings_clear_cache_desc">Eliminar datos temporales y archivos de modelos en caché.</string>
     <string name="settings_clear">Borrar</string>
     <string name="settings_repeat_penalty">Penalización de Repetición</string>
@@ -73,12 +73,12 @@
     <string name="benchmark_cpu">Núcleos CPU</string>
     <string name="benchmark_storage">Almacenamiento</string>
     <string name="benchmark_run">Ejecutar Benchmark</string>
-    <string name="benchmark_running">Ejecutando benchmark…</string>
+    <string name="benchmark_running">Ejecutando benchmark...</string>
     <string name="history_title">Conversaciones</string>
     <string name="history_no_conversations">Sin conversaciones</string>
     <string name="history_delete">Eliminar</string>
     <string name="history_search">Buscar conversaciones</string>
-    <string name="service_generating">Generando respuesta…</string>
+    <string name="service_generating">Generando respuesta...</string>
     <string name="service_stop">Detener</string>
     <string name="service_minimize">Minimizar</string>
     <string name="error_insufficient_ram">RAM insuficiente</string>
@@ -96,14 +96,13 @@
     <string name="restore_models_body">Se encontraron modelos descargados faltantes. Vincula tu carpeta de modelos para restaurar sin volver a descargar.</string>
     <string name="restore_models_relink">Vincular carpeta</string>
     <string name="restore_models_later">Más tarde</string>
-    <string name="drawer_title">Local Mind - Private Offline AI</string>
+    <string name="drawer_title">Local Mind</string>
     <string name="drawer_chat">Chat</string>
     <string name="drawer_history">Historial</string>
     <string name="drawer_model_library">Biblioteca de Modelos</string>
     <string name="drawer_hf_hub">Hugging Face Hub</string>
     <string name="drawer_import_model">Importar Modelo</string>
     <string name="drawer_benchmark">Benchmark</string>
-    <string name="drawer_personas">Personas</string>
     <string name="drawer_recent_chats">Chats Recientes</string>
     <string name="drawer_untitled_chat">Chat Sin Título</string>
     <string name="drawer_settings">Configuración</string>
@@ -116,17 +115,17 @@
     <string name="cancel">Cancelar</string>
     <string name="delete">Eliminar</string>
     <string name="confirm">Confirmar</string>
-    <string name="loading">Cargando…</string>
+    <string name="loading">Cargando...</string>
     <string name="model_hub_title">Biblioteca de Modelos</string>
     <string name="model_hub_badge_hf">HF</string>
     <string name="model_hub_phone_title">LLMs compatibles con teléfono</string>
     <string name="model_hub_phone_subtitle">Modelos curados que funcionan offline en tu teléfono</string>
-    <string name="model_hub_search_hint">Buscar modelos…</string>
+    <string name="model_hub_search_hint">Buscar modelos...</string>
     <string name="model_hub_models_available">%1$d modelos disponibles</string>
     <string name="model_hub_no_models_match">Ningún modelo coincide con tu búsqueda</string>
     <string name="model_hub_load_more">Cargar Más</string>
     <string name="model_hub_not_compatible">No compatible con tu teléfono</string>
-    <string name="model_hub_downloading_name">Descargando %1$s…</string>
+    <string name="model_hub_downloading_name">Descargando %1$s...</string>
     <string name="model_hub_download">Descargar</string>
     <string name="model_hub_force_download">Forzar Descarga</string>
     <string name="model_hub_incompatible">Incompatible</string>
@@ -171,7 +170,7 @@
     <string name="model_hub_runs_locally">Ejecuta Localmente</string>
     <string name="model_hub_use_in_cloud">Usar en Cloud</string>
     <string name="settings_permissions">Permisos</string>
-    <string name="chat_analyzing_document">Analizando documento…</string>
+    <string name="chat_analyzing_document">Analizando documento...</string>
     <string name="model_hub_ready_to_use">Listo para Usar</string>
     <string name="model_hub_available_to_download">Disponible para Descargar</string>
     <string name="model_hub_find_more">Usa el botón + para buscar más modelos</string>

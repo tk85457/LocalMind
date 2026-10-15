@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -44,6 +45,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
@@ -73,6 +76,11 @@ import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.HistoryEdu
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -128,6 +136,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -137,12 +146,12 @@ import com.tk854.localmind.ui.viewmodel.ChatViewModel
 import com.tk854.localmind.ui.viewmodel.ChatState
 import com.tk854.localmind.domain.model.Message
 import com.tk854.localmind.domain.model.MessageRole
-import com.tk854.localmind.domain.model.Persona
 import com.tk854.localmind.ui.components.ModelEmptyState
 import com.tk854.localmind.ui.components.MarkdownText
 import com.tk854.localmind.ui.components.MessageBubble
 import com.tk854.localmind.ui.components.ChatInputBar
 import com.tk854.localmind.ui.components.ChatMessageList
+import com.tk854.localmind.ui.theme.NeonBorder
 import com.tk854.localmind.ui.theme.NeonElevated
 import com.tk854.localmind.ui.theme.NeonError
 import com.tk854.localmind.ui.theme.NeonPrimary
@@ -152,6 +161,7 @@ import com.tk854.localmind.ui.theme.NeonText
 import com.tk854.localmind.ui.theme.NeonTextExtraMuted
 import com.tk854.localmind.ui.theme.NeonTextSecondary
 import com.tk854.localmind.ui.viewmodel.Attachment
+import com.tk854.localmind.ui.viewmodel.SettingsViewModel
 import com.tk854.localmind.data.local.entity.PromptTemplateEntity
 import com.tk854.localmind.ui.components.ThinkingBubble
 import com.tk854.localmind.ui.components.ThinkingIndicator
@@ -171,17 +181,20 @@ fun ChatScreen(
     onNavigateToModels: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onOpenDrawer: () -> Unit = {},
-    onNavigateToPersonaManagement: () -> Unit = {},
     onNavigateToPromptTemplates: () -> Unit = {},
-    viewModel: ChatViewModel = hiltViewModel()
+    viewModel: ChatViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     // STREAMING FIX: state aur streamingText alag collect karo.
-    // state: messages, isGenerating, etc. â€” infrequent changes
-    // streamingText: har 32ms badalta hai â€” sirf streaming bubble recompose hoga
+    // state: messages, isGenerating, etc.  —  infrequent changes
+    // streamingText: har 32ms badalta hai  —  sirf streaming bubble recompose hoga
     val state by viewModel.state.collectAsStateWithLifecycle()
     val streamingText by viewModel.streamingText.collectAsStateWithLifecycle()
     val streamingReasoningText by viewModel.streamingReasoningText.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
+    val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+    var showOverflowMenu by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
     // AUDIT FIX #9: Lifecycle-safe coroutine scope for clipboard auto-clear
     val clipboardClearScope = androidx.compose.runtime.rememberCoroutineScope()
     // TextFieldValue: cursor position + scroll position dono control hoti hai
@@ -195,7 +208,7 @@ fun ChatScreen(
     val context = LocalContext.current
     val dimens = com.tk854.localmind.ui.theme.LocalDimens.current
 
-    // Consolidated single attachment launcher â€“ accepts images AND PDFs in one picker
+    // Consolidated single attachment launcher – accepts images AND PDFs in one picker
     val attachFileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -210,14 +223,14 @@ fun ChatScreen(
             context = context,
             onResults = { result ->
                 val newText = (if (stableInputText.isBlank()) "" else "$stableInputText ") + result
-                // Cursor end mein set karo â€” user ko dikhe ki text aa gaya
+                // Cursor end mein set karo  —  user ko dikhe ki text aa gaya
                 inputText = TextFieldValue(text = newText, selection = TextRange(newText.length))
                 isListening = false
             },
             onPartialResults = { partial ->
                 if (partial.isNotBlank()) {
                     val newText = (if (stableInputText.isBlank()) "" else "$stableInputText ") + partial
-                    // Partial results bhi cursor end mein â€” real-time scroll
+                    // Partial results bhi cursor end mein  —  real-time scroll
                     inputText = TextFieldValue(text = newText, selection = TextRange(newText.length))
                 }
             },
@@ -284,7 +297,7 @@ fun ChatScreen(
         }
     }
 
-    // Screen on rakhne ke liye FLAG_KEEP_SCREEN_ON use karo â€” PARTIAL_WAKE_LOCK sirf CPU on rakhta hai.
+    // Screen on rakhne ke liye FLAG_KEEP_SCREEN_ON use karo  —  PARTIAL_WAKE_LOCK sirf CPU on rakhta hai.
     // Window flag approach: Compose mein sabse reliable tarika.
     val activity = context as? android.app.Activity
     DisposableEffect(state.isGenerating) {
@@ -328,14 +341,14 @@ fun ChatScreen(
             viewModel.ensureModelLoaded()
         }
     }
-    // Auto-scroll ab ChatMessageList ke andar handle hota hai â€” PocketPal style.
+    // Auto-scroll ab ChatMessageList ke andar handle hota hai  —  PocketPal style.
     // reverseLayout=true + derivedStateOf(atLatest) + LaunchedEffect(streamLen) = smooth auto-scroll.
     // Yahan sirf keyboard open hone par scroll karo (IME aane par newest content dikhao).
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     androidx.compose.runtime.LaunchedEffect(imeBottom) {
         // STOP FIX: sirf tab scroll karo jab keyboard actually khula ho (imeBottom > 100px)
         // aur generation chal rahi ho. Stop press hone par layout change se imeBottom
-        // recompute hota tha aur ye fire ho jaata tha â€” input ke paas jarring scroll.
+        // recompute hota tha aur ye fire ho jaata tha  —  input ke paas jarring scroll.
         if (imeBottom > 100 && state.isGenerating && listState.firstVisibleItemIndex == 0) {
             listState.animateScrollToItem(0)
         }
@@ -354,146 +367,176 @@ fun ChatScreen(
                     }
                 },
                 title = {
-                    val persona = state.selectedPersona ?: com.tk854.localmind.domain.model.Persona.DEFAULT_ASSISTANT
-                    // PocketPal-style: title tap karne pe bottom sheet khulta hai
-                    // jisme Pals (personas) aur Models dono tabs hain
-                    Row(
-                        modifier = Modifier
-                            .clickable { showBottomSheet = true }
-                            .padding(vertical = 4.dp, horizontal = dimens.spacingSmall),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
                     ) {
                         Surface(
-                            shape = CircleShape,
-                            color = NeonPrimary.copy(alpha = 0.1f),
-                            modifier = Modifier.size(32.dp)
+                            onClick = { showBottomSheet = true },
+                            shape = RoundedCornerShape(20.dp),
+                            color = NeonElevated,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonBorder)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(persona.icon, fontSize = 18.sp)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(dimens.spacingSmall))
-
-                        Column {
-                            Text(
-                                text = state.currentConversation?.title ?: "New Chat",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = NeonText,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1
-                            )
-                            // Active model name as subtitle
-                            state.activeModel?.let { model ->
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = model.name,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = NeonPrimary.copy(alpha = 0.8f),
-                                    maxLines = 1
+                                    text = state.activeModel?.name ?: "Local Mind",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = NeonText,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.widthIn(max = 160.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Select Model",
+                                    tint = NeonTextSecondary,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
-
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = null,
-                            tint = NeonPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showVoiceSelector = true }) {
+                    // One-tap Dark / Light mode toggle
+                    IconButton(onClick = { settingsViewModel.updateDarkMode(!settings.darkMode) }) {
                         Icon(
-                            imageVector = Icons.Default.RecordVoiceOver,
-                            contentDescription = "Change Voice",
+                            imageVector = if (settings.darkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (settings.darkMode) "Light Mode" else "Dark Mode",
                             tint = NeonTextSecondary
                         )
                     }
 
-                    DropdownMenu(
-                        expanded = showVoiceSelector,
-                        onDismissRequest = { showVoiceSelector = false },
-                        modifier = Modifier.background(NeonSurface)
-                    ) {
-                        val availableVoices = tts?.voices?.filter { it.locale.language == Locale.getDefault().language }?.sortedBy { it.name } ?: emptyList()
-                        if (availableVoices.isEmpty()) {
-                            DropdownMenuItem(
-                                text = { Text("No voices available", color = NeonTextSecondary) },
-                                onClick = { showVoiceSelector = false }
-                            )
-                        } else {
-                            availableVoices.forEachIndexed { index, voice ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = "Voice ${index + 1}",
-                                            color = if (tts?.voice?.name == voice.name) NeonPrimary else NeonText
-                                        )
-                                    },
-                                    onClick = {
-                                        tts?.voice = voice
-                                        showVoiceSelector = false
-                                        Toast.makeText(context, "Voice changed to ${voice.name}", Toast.LENGTH_SHORT).show()
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    IconButton(onClick = { showSearch = !showSearch }) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = NeonTextSecondary
-                        )
-                    }
-
-
-
+                    // New Chat button
                     IconButton(onClick = { viewModel.createNewConversation() }) {
                         Icon(
-                            imageVector = Icons.Outlined.AddCircleOutline,
+                            imageVector = Icons.Default.Add,
                             contentDescription = "New Chat",
-                            tint = NeonPrimary
-                        )
-                    }
-
-                    var showExportDialog by remember { mutableStateOf(false) }
-                    IconButton(onClick = { showExportDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Export Chat",
                             tint = NeonTextSecondary
                         )
                     }
 
-                    if (showExportDialog) {
-                        ExportFormatDialog(
-                            onDismiss = { showExportDialog = false },
-                            onFormatSelected = { format ->
-                                showExportDialog = false
-                                val exportText = if (format == "json") viewModel.exportChatAsJson() else viewModel.exportChatAsText(context)
-                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(android.content.Intent.EXTRA_TEXT, exportText)
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Chat Export")
+                    // 3-dots overflow menu
+                    Box {
+                        IconButton(onClick = { showOverflowMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More Options",
+                                tint = NeonTextSecondary
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showOverflowMenu,
+                            onDismissRequest = { showOverflowMenu = false },
+                            modifier = Modifier.background(NeonSurface)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Search in Chat", color = NeonText) },
+                                leadingIcon = { Icon(Icons.Default.Search, null, tint = NeonTextSecondary) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showSearch = !showSearch
                                 }
-                                context.startActivity(android.content.Intent.createChooser(shareIntent, "Export Chat"))
-                            }
-                        )
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Voice Options", color = NeonText) },
+                                leadingIcon = { Icon(Icons.Default.RecordVoiceOver, null, tint = NeonTextSecondary) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showVoiceSelector = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Export Chat", color = NeonText) },
+                                leadingIcon = { Icon(Icons.Default.Share, null, tint = NeonTextSecondary) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showExportDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Model Manager", color = NeonText) },
+                                leadingIcon = { Icon(Icons.Default.Tune, null, tint = NeonTextSecondary) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    onNavigateToModels()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Settings", color = NeonText) },
+                                leadingIcon = { Icon(Icons.Default.Settings, null, tint = NeonTextSecondary) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    onNavigateToSettings()
+                                }
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = NeonSurface),
-                // UI FIX v2: TopAppBar ka windowInsets = zero set karo.
-                // Scaffold apne paddingValues mein top inset (statusBar height) add karta hai
-                // jab TopAppBar ka windowInsets = WindowInsets.statusBars hota hai.
-                // Lekin agar outer Box/Drawer mein insets already consume ho chuke hain,
-                // toh TopAppBar DOUBLE-counts â€” content neeche dhak jaata hai.
-                // Solution: TopAppBar ko zero insets do, Scaffold modifier pe statusBarsPadding() lagao.
                 windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
             )
+
+            if (showExportDialog) {
+                ExportFormatDialog(
+                    onDismiss = { showExportDialog = false },
+                    onFormatSelected = { format ->
+                        showExportDialog = false
+                        val exportText = if (format == "json") viewModel.exportChatAsJson() else viewModel.exportChatAsText(context)
+                        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, exportText)
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, "Chat Export")
+                        }
+                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Export Chat"))
+                    }
+                )
+            }
+
+            if (showVoiceSelector) {
+                val availableVoices = tts?.voices?.filter { it.locale.language == Locale.getDefault().language }?.sortedBy { it.name } ?: emptyList()
+                AlertDialog(
+                    onDismissRequest = { showVoiceSelector = false },
+                    title = { Text("Select Voice", color = NeonText) },
+                    text = {
+                        if (availableVoices.isEmpty()) {
+                            Text("No voices available for system language", color = NeonTextSecondary)
+                        } else {
+                            LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
+                                items(availableVoices) { voice ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                tts?.voice = voice
+                                                showVoiceSelector = false
+                                                Toast.makeText(context, "Voice changed to ${voice.name}", Toast.LENGTH_SHORT).show()
+                                            }
+                                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = voice.name,
+                                            color = if (tts?.voice?.name == voice.name) NeonPrimary else NeonText,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showVoiceSelector = false }) {
+                            Text("Close", color = NeonPrimary)
+                        }
+                    },
+                    containerColor = NeonSurface
+                )
+            }
         },
         modifier = Modifier.statusBarsPadding()
     ) { paddingValues ->
@@ -506,14 +549,14 @@ fun ChatScreen(
         ) {
             // BUG FIX: isLoadingModel check zaroori hai.
             // Pehle: activeModel==null pe turant EmptyState show hota tha, chahe model
-            // background mein load ho raha ho â€” ye tab bhi trigger hota tha.
+            // background mein load ho raha ho  —  ye tab bhi trigger hota tha.
             // Ab: sirf tab show karo jab na koi model hai, na load ho raha ho, na generating ho.
             // BLINK FIX: Single stable gate.
             // isLoading=true on startup (ChatState default). ONE transition, no flicker.
             val isAppInitializing = state.isLoading || state.isLoadingModel
 
             if (isAppInitializing) {
-                // Stable loading screen â€” no switch between ModelEmptyState/EmptyChatWelcome/spinner
+                // Stable loading screen  —  no switch between ModelEmptyState/EmptyChatWelcome/spinner
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center
@@ -528,7 +571,7 @@ fun ChatScreen(
                             strokeWidth = 2.dp
                         )
                         Text(
-                            text = if (state.isLoadingModel) "Loading modelâ€¦" else "Startingâ€¦",
+                            text = if (state.isLoadingModel) "Loading model..." else "Starting...",
                             color = NeonTextSecondary,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -591,7 +634,7 @@ fun ChatScreen(
                 }
 
                 // Filtered messages based on search query
-                // AUDIT FIX #15: remember memoization â€” large chats mein lag nahi hoga
+                // AUDIT FIX #15: remember memoization  —  large chats mein lag nahi hoga
                 val displayMessages = remember(searchQuery, state.messages) {
                     if (searchQuery.isBlank()) state.messages
                     else state.messages.filter { it.content.contains(searchQuery, ignoreCase = true) }
@@ -640,7 +683,7 @@ fun ChatScreen(
                     }
                 }
 
-                // Performance warning banner â€” 3 seconds mein auto-dismiss hota hai
+                // Performance warning banner  —  3 seconds mein auto-dismiss hota hai
                 var showPerfWarning by remember { mutableStateOf(true) }
                 LaunchedEffect(state.performanceWarning) {
                     // AUDIT FIX #10: Pehle showPerfWarning=true set karo, PHIR delay
@@ -689,13 +732,11 @@ fun ChatScreen(
                     }
                 }
 
-                // AUDIT FIX #4: streamingText bhi check karo â€” first message bhejte time
+                // AUDIT FIX #4: streamingText bhi check karo  —  first message bhejte time
                 // messages empty + generating true hota hai toh screen blank dikhta tha
                 if (displayMessages.isEmpty() && !state.isGenerating && streamingText.isNullOrBlank()) {
                     EmptyChatWelcome(
                         modifier = Modifier.weight(1f),
-                        personaName = state.selectedPersona?.name ?: "Assistant",
-                        personaIcon = state.selectedPersona?.icon ?: "ðŸ¤–",
                         onSuggestionClick = { suggestion ->
                             inputText = TextFieldValue(text = suggestion, selection = TextRange(suggestion.length))
                         }
@@ -710,8 +751,8 @@ fun ChatScreen(
                     listState = listState,
                     messages = displayMessages,
                     isGenerating = state.isGenerating,
-                    // STREAMING FIX: alag StateFlow se liya â€” sirf streaming bubble recompose hoga
-                    // AUDIT FIX #2 + #3: null guard â€” null aate hi bubble collapse/flicker hota tha
+                    // STREAMING FIX: alag StateFlow se liya  —  sirf streaming bubble recompose hoga
+                    // AUDIT FIX #2 + #3: null guard  —  null aate hi bubble collapse/flicker hota tha
                     streamingResponse = streamingText ?: "",
                     streamingReasoning = streamingReasoningText ?: "",
                     isThinking = state.isThinking,
@@ -721,7 +762,7 @@ fun ChatScreen(
                     isAnalyzingMedia = state.isAnalyzingMedia,
                     currentlySpeakingMessageId = currentlySpeakingMessageId,
                     availableModels = state.downloadedModels,
-                    streamingModelLabel = state.selectedPersona?.name ?: state.activeModel?.name ?: "AI",
+                    streamingModelLabel = state.activeModel?.name ?: "AI",
                     onRegenerateWithModel = { msgId, model ->
                         viewModel.regenerateWithModel(msgId, model, context)
                     },
@@ -758,7 +799,7 @@ fun ChatScreen(
                         clipboardManager.setPrimaryClip(clipData)
                         android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
                         // Auto-clear clipboard after 2 minutes
-                        // AUDIT FIX #9: rememberCoroutineScope use karo â€” lifecycle-safe
+                        // AUDIT FIX #9: rememberCoroutineScope use karo  —  lifecycle-safe
                         // MainScope() se memory leak hota tha (lifecycle ignore)
                         clipboardClearScope.launch {
                             kotlinx.coroutines.delay(120_000L)
@@ -775,26 +816,10 @@ fun ChatScreen(
                 } // end else (messages not empty)
                 // showScrollToBottom is now computed inside ChatMessageList
 
-                // â”€â”€ Attachment chips row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                if (state.attachments.isNotEmpty()) {
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(state.attachments) { attachment ->
-                            AttachmentChip(
-                                attachment = attachment,
-                                onRemove = { viewModel.removeAttachment(attachment) }
-                            )
-                        }
-                    }
-                }
 
 
 
-                // Performance metrics pill â€” shows tps after generation completes
+                // Performance metrics pill  —  shows tps after generation completes
                 val lastPerf = state.lastPerfMetrics
                 val streamTelemetry = state.streamingTelemetry
                 val showPerfPill = !state.isGenerating && (lastPerf != null || streamTelemetry != null)
@@ -882,7 +907,7 @@ fun ChatScreen(
                 }
 
                 // Context window usage indicator
-                // Real context size use karo â€” avgTokensPerMsg ~200 assume (realistic for chat)
+                // Real context size use karo  —  avgTokensPerMsg ~200 assume (realistic for chat)
                 val msgCount = state.messages.size
                 val contextTokens = state.activeModel?.contextLength?.takeIf { it > 0 } ?: 4096
                 val avgTokensPerMsg = 200
@@ -918,6 +943,8 @@ fun ChatScreen(
                 ChatInputBar(
                     inputText = inputText,
                     onInputTextChanged = { inputText = it },
+                    attachments = state.attachments,
+                    onRemoveAttachment = { viewModel.removeAttachment(it) },
                     isEditMode = state.pendingEditMessageId != null,
                     editingPreview = state.pendingEditMessageId?.let { id ->
                         state.messages.find { it.id == id }?.content
@@ -974,15 +1001,18 @@ fun ChatScreen(
     }
 
     if (showBottomSheet) {
-        ModelPersonaBottomSheet(
-            state = state,
+        ModelBottomSheet(
+            models = state.downloadedModels,
+            activeModel = state.activeModel,
+            isLoadingModel = state.isLoadingModel,
             onDismiss = { showBottomSheet = false },
-            onSelectModel = { viewModel.switchModel(it.id) },
-            onSelectPersona = { viewModel.selectPersona(it) },
-            onNavigateToModels = onNavigateToModels,
-            onNavigateToPersonas = {
+            onSelectModel = { model ->
                 showBottomSheet = false
-                onNavigateToPersonaManagement()
+                viewModel.switchModel(model.id)
+            },
+            onNavigateToModels = {
+                showBottomSheet = false
+                onNavigateToModels()
             },
             sheetState = sheetState
         )
@@ -1212,35 +1242,17 @@ fun AttachmentPreview(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ModelPersonaBottomSheet(
-    state: ChatState,
+fun ModelBottomSheet(
+    models: List<com.tk854.localmind.domain.model.Model>,
+    activeModel: com.tk854.localmind.domain.model.Model?,
+    isLoadingModel: Boolean = false,
     onDismiss: () -> Unit,
     onSelectModel: (com.tk854.localmind.domain.model.Model) -> Unit,
-    onSelectPersona: (com.tk854.localmind.domain.model.Persona) -> Unit,
     onNavigateToModels: () -> Unit,
-    onNavigateToPersonas: () -> Unit = {},
     sheetState: androidx.compose.material3.SheetState
 ) {
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { 2 })
-    val sheetContext = LocalContext.current
-    var lastSelectedPersona by remember { mutableStateOf(state.selectedPersona) }
-
-    // Persona switch toast
-    LaunchedEffect(state.selectedPersona) {
-        val newPersona = state.selectedPersona
-        if (newPersona != null && newPersona.id != lastSelectedPersona?.id) {
-            android.widget.Toast.makeText(
-                sheetContext,
-                "Switched to ${newPersona.name} ðŸ˜„",
-                android.widget.Toast.LENGTH_SHORT
-            ).show()
-        }
-        lastSelectedPersona = newPersona
-    }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -1259,175 +1271,60 @@ fun ModelPersonaBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp)
+                .padding(bottom = 24.dp)
         ) {
-            TabRow(
-                selectedTabIndex = pagerState.currentPage,
-                containerColor = Color.Transparent,
-                contentColor = NeonPrimary,
-                divider = {},
-                indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
-                        color = NeonPrimary
-                    )
-                }
-            ) {
-                Tab(
-                    selected = pagerState.currentPage == 0,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
-                    text = { Text("Pals", fontWeight = FontWeight.Bold) },
-                    selectedContentColor = NeonPrimary,
-                    unselectedContentColor = NeonTextSecondary
-                )
-                Tab(
-                    selected = pagerState.currentPage == 1,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
-                    text = { Text("Models", fontWeight = FontWeight.Bold) },
-                    selectedContentColor = NeonPrimary,
-                    unselectedContentColor = NeonTextSecondary
-                )
-            }
+            Text(
+                text = "Switch Model",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                ),
+                color = NeonText,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+            )
 
-            HorizontalPager(
-                state = pagerState,
+            val screenHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
+            val listHeight = (screenHeight * 0.48f).coerceIn(200.dp, 440.dp)
+
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(400.dp)
-            ) { page ->
-                when (page) {
-                    0 -> PersonaPage(
-                        personas = state.availablePersonas,
-                        selectedPersona = state.selectedPersona,
-                        onSelect = { persona ->
-                            onSelectPersona(persona)
-                            coroutineScope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
-                        },
-                        onManage = {
-                            coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
-                                onDismiss()
-                                onNavigateToPersonas()
-                            }
-                        }
-                    )
-                    1 -> ModelPage(
-                        models = state.downloadedModels,
-                        activeModel = state.activeModel,
-                        isLoadingModel = state.isLoadingModel,
-                        onSelect = {
-                            onSelectModel(it)
-                            coroutineScope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
-                        },
-                        onManage = onNavigateToModels
-                    )
+                    .heightIn(max = listHeight)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                if (models.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No downloaded models found.",
+                            color = NeonTextSecondary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(vertical = 16.dp, horizontal = 4.dp)
+                        )
+                    }
+                } else {
+                    items(models, key = { it.id }) { model ->
+                        ModelSwitcherCard(
+                            model = model,
+                            isActive = activeModel?.id == model.id,
+                            isLoading = isLoadingModel && activeModel?.id == model.id,
+                            onSelect = { onSelectModel(model) }
+                        )
+                    }
                 }
             }
-        }
-    }
-}
 
-@Composable
-fun PersonaPage(
-    personas: List<com.tk854.localmind.domain.model.Persona>,
-    selectedPersona: com.tk854.localmind.domain.model.Persona?,
-    onSelect: (com.tk854.localmind.domain.model.Persona) -> Unit,
-    onManage: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 8.dp)
-        ) {
-            items(personas, key = { it.id }) { p ->
-                PersonaCard(
-                    persona = p,
-                    isSelected = selectedPersona?.id == p.id,
-                    onSelect = { onSelect(p) }  // turant activate
-                )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(
+                onClick = onNavigateToModels,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Icon(Icons.Default.Architecture, null, modifier = Modifier.size(16.dp), tint = NeonPrimary)
+                Spacer(Modifier.width(8.dp))
+                Text("Model Library", color = NeonPrimary, fontWeight = FontWeight.SemiBold)
             }
-        }
-        TextButton(
-            onClick = onManage,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        ) {
-            Icon(Icons.Default.Settings, null, modifier = Modifier.size(14.dp), tint = NeonPrimary)
-            Spacer(Modifier.width(6.dp))
-            Text("Manage Pals", color = NeonPrimary, style = MaterialTheme.typography.labelMedium)
-        }
-    }
-}
-
-@Composable
-fun PersonaCard(
-    persona: com.tk854.localmind.domain.model.Persona,
-    isSelected: Boolean,
-    onSelect: () -> Unit
-) {
-    Surface(
-        onClick = onSelect,
-        color = if (isSelected) NeonPrimary.copy(alpha = 0.15f) else NeonElevated,
-        shape = RoundedCornerShape(16.dp),
-        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, NeonPrimary) else null,
-        modifier = Modifier.size(100.dp, 120.dp)
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(8.dp)
-        ) {
-            Text(persona.icon, fontSize = 32.sp)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                persona.name,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (isSelected) NeonPrimary else NeonText,
-                maxLines = 1,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun ModelPage(
-    models: List<com.tk854.localmind.domain.model.Model>,
-    activeModel: com.tk854.localmind.domain.model.Model?,
-    isLoadingModel: Boolean = false,
-    onSelect: (com.tk854.localmind.domain.model.Model) -> Unit,
-    onManage: () -> Unit
-) {
-    Column {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
-        ) {
-            items(models, key = { it.id }) { model ->
-                ModelSwitcherCard(
-                    model = model,
-                    isActive = activeModel?.id == model.id,
-                    isLoading = isLoadingModel && activeModel?.id == model.id,
-                    onSelect = { onSelect(model) }
-                )
-            }
-        }
-
-        TextButton(
-            onClick = onManage,
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 16.dp)
-        ) {
-            Icon(Icons.Default.Architecture, null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Model Library", color = NeonPrimary)
         }
     }
 }
@@ -1656,71 +1553,143 @@ fun PromptLibraryBottomSheet(
 }
 
 
+data class WelcomePromptSuggestion(
+    val title: String,
+    val description: String,
+    val prompt: String
+)
+
 @Composable
 fun EmptyChatWelcome(
     modifier: Modifier = Modifier,
-    personaName: String,
-    personaIcon: String,
     onSuggestionClick: (String) -> Unit
 ) {
-    val suggestions = listOf(
-        "Explain quantum computing simply",
-        "Write a Python script to sort a list",
-        "What are the best productivity tips?",
-        "Help me debug my code"
-    )
+    val suggestions = remember {
+        listOf(
+            WelcomePromptSuggestion(
+                title = "Brainstorm ideas",
+                description = "energizing routine for daily focus",
+                prompt = "Brainstorm a practical and energizing morning routine that boosts daily focus and productivity."
+            ),
+            WelcomePromptSuggestion(
+                title = "Write & Debug Code",
+                description = "solve problems or write clean algorithms",
+                prompt = "Write a clean Kotlin function with unit tests to process and validate structured data."
+            ),
+            WelcomePromptSuggestion(
+                title = "Summarize text",
+                description = "extract bullet points & action items",
+                prompt = "Help me summarize complex text into clear, bulleted takeaways and actionable steps."
+            ),
+            WelcomePromptSuggestion(
+                title = "Explain a concept",
+                description = "understand difficult topics simply",
+                prompt = "Explain how large language models generate tokens step by step in simple terms."
+            )
+        )
+    }
+
     Box(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 32.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 16.dp)
         ) {
-            // Persona icon: custom persona ke liye emoji, default ke liye animated brain
-            if (personaIcon != "ðŸ¤–" && personaIcon.isNotBlank()) {
-                Text(
-                    text = personaIcon,
-                    fontSize = 72.sp
-                )
-            } else {
-                BrainLogoIcon(size = 96.dp)
-            }
+            // ChatGPT-style clean emblem
+            BrainLogoIcon(size = 48.dp)
+
             Spacer(Modifier.height(16.dp))
+
             Text(
-                text = "Hi, I'm $personaName",
-                style = MaterialTheme.typography.headlineSmall,
+                text = "What can I help with today?",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 22.sp
+                ),
                 color = NeonText,
-                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Private Â· On-Device Â· Always Ready",
-                style = MaterialTheme.typography.bodySmall,
-                color = NeonPrimary.copy(alpha = 0.7f),
-                letterSpacing = 1.sp,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(32.dp))
-            suggestions.forEach { suggestion ->
-                Surface(
-                    onClick = { onSuggestionClick(suggestion) },
-                    color = NeonElevated,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+
+            Spacer(Modifier.height(24.dp))
+
+            // 2x2 grid of prompt suggestions
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = suggestion,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = NeonTextSecondary
+                    PromptCard(
+                        modifier = Modifier.weight(1f),
+                        item = suggestions[0],
+                        onClick = { onSuggestionClick(suggestions[0].prompt) }
+                    )
+                    PromptCard(
+                        modifier = Modifier.weight(1f),
+                        item = suggestions[1],
+                        onClick = { onSuggestionClick(suggestions[1].prompt) }
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    PromptCard(
+                        modifier = Modifier.weight(1f),
+                        item = suggestions[2],
+                        onClick = { onSuggestionClick(suggestions[2].prompt) }
+                    )
+                    PromptCard(
+                        modifier = Modifier.weight(1f),
+                        item = suggestions[3],
+                        onClick = { onSuggestionClick(suggestions[3].prompt) }
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PromptCard(
+    modifier: Modifier = Modifier,
+    item: WelcomePromptSuggestion,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = NeonElevated,
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, NeonBorder),
+        modifier = modifier.heightIn(min = 82.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = NeonText,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = item.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = NeonTextSecondary,
+                maxLines = 2
+            )
         }
     }
 }
@@ -1772,104 +1741,22 @@ fun ExportFormatDialog(
     )
 }
 
-// ===== Animated Brain Logo Icon for Empty Chat Screen =====
+// ===== Minimalist ChatGPT-style Logo Icon for Empty Chat Screen =====
 @Composable
-fun BrainLogoIcon(size: Dp = 88.dp) {
-    val inf = rememberInfiniteTransition(label = "brain")
-    val ringRot by inf.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(8000, easing = androidx.compose.animation.core.LinearEasing), RepeatMode.Restart),
-        label = "ringRot"
-    )
-    val glow by inf.animateFloat(
-        initialValue = 0.5f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1800, easing = androidx.compose.animation.core.FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "glow"
-    )
-    val nodeBlink by inf.animateFloat(
-        initialValue = 0.4f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-        label = "node"
-    )
-    val primary = NeonPrimary
-    val primaryVar = NeonPrimaryVariant
-
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(size)) {
-        androidx.compose.foundation.Canvas(
-            modifier = Modifier.size(size).graphicsLayer { rotationZ = ringRot }
-        ) {
-            val r = this.size.minDimension / 2f - 3.dp.toPx()
-            val cx = this.size.width / 2f
-            val cy = this.size.height / 2f
-            val circumference = 2f * Math.PI.toFloat() * r
-            val dashLen = 14f
-            val gapLen = 8f
-            val count = (circumference / (dashLen + gapLen)).toInt()
-            repeat(count) { i ->
-                val startAngle = i * (360f / count)
-                drawArc(
-                    color = primary.copy(alpha = glow * 0.6f),
-                    startAngle = startAngle,
-                    sweepAngle = dashLen / circumference * 360f,
-                    useCenter = false,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(
-                        width = 1.5.dp.toPx(),
-                        cap = androidx.compose.ui.graphics.StrokeCap.Round
-                    ),
-                    topLeft = androidx.compose.ui.geometry.Offset(cx - r, cy - r),
-                    size = androidx.compose.ui.geometry.Size(r * 2, r * 2)
-                )
-            }
-        }
-        androidx.compose.foundation.Canvas(modifier = Modifier.size(size * 0.72f)) {
-            val w = this.size.width
-            val h = this.size.height
-            val cx = w / 2f
-            val cy = h / 2f
-            val br = w * 0.42f
-            drawCircle(
-                color = primary.copy(alpha = glow * 0.12f),
-                radius = br * 1.15f,
-                center = androidx.compose.ui.geometry.Offset(cx, cy)
+fun BrainLogoIcon(size: Dp = 48.dp) {
+    Surface(
+        modifier = Modifier.size(size),
+        shape = CircleShape,
+        color = NeonElevated,
+        border = androidx.compose.foundation.BorderStroke(1.dp, NeonBorder)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = NeonPrimary,
+                modifier = Modifier.size(size * 0.52f)
             )
-            drawOval(
-                color = primaryVar.copy(alpha = 0.85f),
-                topLeft = androidx.compose.ui.geometry.Offset(cx - br, cy - br * 0.85f),
-                size = androidx.compose.ui.geometry.Size(br * 1.05f, br * 1.7f)
-            )
-            drawOval(
-                color = primary.copy(alpha = 0.75f),
-                topLeft = androidx.compose.ui.geometry.Offset(cx - 0.05f * br, cy - br * 0.85f),
-                size = androidx.compose.ui.geometry.Size(br * 1.05f, br * 1.7f)
-            )
-            drawLine(
-                color = primary.copy(alpha = 0.4f),
-                start = androidx.compose.ui.geometry.Offset(cx, cy - br * 0.7f),
-                end = androidx.compose.ui.geometry.Offset(cx, cy + br * 0.7f),
-                strokeWidth = 1.5.dp.toPx()
-            )
-            val nodes = listOf(
-                androidx.compose.ui.geometry.Offset(cx - br * 0.55f, cy - br * 0.35f),
-                androidx.compose.ui.geometry.Offset(cx - br * 0.2f, cy - br * 0.6f),
-                androidx.compose.ui.geometry.Offset(cx + br * 0.2f, cy - br * 0.5f),
-                androidx.compose.ui.geometry.Offset(cx + br * 0.5f, cy - br * 0.2f),
-                androidx.compose.ui.geometry.Offset(cx + br * 0.4f, cy + br * 0.3f),
-                androidx.compose.ui.geometry.Offset(cx - br * 0.1f, cy + br * 0.5f),
-                androidx.compose.ui.geometry.Offset(cx - br * 0.5f, cy + br * 0.25f),
-                androidx.compose.ui.geometry.Offset(cx, cy)
-            )
-            listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4, 4 to 5, 5 to 6, 6 to 0, 1 to 7, 3 to 7, 5 to 7).forEach { (a, b) ->
-                drawLine(
-                    color = primary.copy(alpha = 0.45f * glow),
-                    start = nodes[a], end = nodes[b],
-                    strokeWidth = 1.dp.toPx()
-                )
-            }
-            nodes.forEachIndexed { i, pos ->
-                val alpha = if (i % 2 == 0) nodeBlink else (1f - nodeBlink + 0.4f)
-                drawCircle(color = primary.copy(alpha = alpha), radius = if (i == 7) 4.dp.toPx() else 2.5.dp.toPx(), center = pos)
-                drawCircle(color = Color.White.copy(alpha = alpha * 0.6f), radius = 1.dp.toPx(), center = pos)
-            }
         }
     }
 }

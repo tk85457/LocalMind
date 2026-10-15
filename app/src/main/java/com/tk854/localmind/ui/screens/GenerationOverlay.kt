@@ -230,7 +230,7 @@ private fun BrainCorePulse() {
 
         // Icon
         Text(
-            text = "ðŸ§ ",
+            text = "🧠",
             fontSize = 48.sp,
             modifier = Modifier.alpha(alpha)
         )

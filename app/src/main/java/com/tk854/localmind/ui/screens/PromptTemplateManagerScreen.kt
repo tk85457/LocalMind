@@ -193,7 +193,7 @@ private fun PromptTemplateCard(
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    template.content.take(100) + if (template.content.length > 100) "â€¦" else "",
+                    template.content.take(100) + if (template.content.length > 100) "..." else "",
                     color = NeonTextSecondary,
                     fontSize = 12.sp,
                     maxLines = 2

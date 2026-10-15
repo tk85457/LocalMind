@@ -64,7 +64,7 @@ fun MemorySettingsSection(
                     if (!input.all { c -> c.isDigit() }) return@OutlinedTextField
                     contextSizeInput = input
 
-                    // Minimum 512 ho tabhi save karo â€” incomplete/tiny values avoid karo
+                    // Minimum 512 ho tabhi save karo  —  incomplete/tiny values avoid karo
                     val size = input.toIntOrNull() ?: return@OutlinedTextField
                     if (size < 512) return@OutlinedTextField
                     onContextSizeChange(size)
@@ -104,7 +104,7 @@ fun MemorySettingsSection(
                 })
             )
             Text(
-                "${stringResource(R.string.settings_requires_reload)} â€¢ Recommended: 2048 tokens",
+                "${stringResource(R.string.settings_requires_reload)} • Recommended: 2048 tokens",
                 style = MaterialTheme.typography.bodySmall,
                 color = NeonTextSecondary,
                 modifier = Modifier.padding(top = 4.dp)

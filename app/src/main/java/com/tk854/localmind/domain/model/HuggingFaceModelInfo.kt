@@ -28,8 +28,8 @@ data class HuggingFaceModelInfo(
  * Model size categories for filtering
  */
 enum class ModelCategory(val label: String, val emoji: String) {
-    TINY("Tiny (<1B)", "âš¡"),
-    SMALL("Small (1-3B)", "ðŸ”¹"),
-    MEDIUM("Medium (3-7B)", "ðŸ”·"),
-    ALL("All Models", "ðŸ“¦")
+    TINY("Tiny (<1B)", "⚡"),
+    SMALL("Small (1-3B)", "🔹"),
+    MEDIUM("Medium (3-7B)", "🔷"),
+    ALL("All Models", "📦")
 }

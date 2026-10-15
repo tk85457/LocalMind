@@ -16,7 +16,7 @@ interface DownloadTaskDao {
     fun getTaskByModelFlow(modelId: String): Flow<DownloadTaskEntity?>
 
     /**
-     * One-shot suspend query â€” used in DownloadOrchestrator to check for an
+     * One-shot suspend query  —  used in DownloadOrchestrator to check for an
      * existing active task BEFORE creating a new UUID, so we never reset
      * progress to 0 while a download is still running or retrying.
      */
